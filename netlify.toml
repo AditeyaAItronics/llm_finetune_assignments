@@ -1,0 +1,9 @@
+# Site lives in the assignment_1/ subfolder — publish it from the repo root.
+[build]
+  publish = "assignment_1"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer"
