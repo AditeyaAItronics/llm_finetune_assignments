@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Neural Proofs — four experiments that prove why deep learning works</title>
+<meta name="description" content="Four in-browser experiments proving why nonlinearity, depth, embeddings and data matter. All computation runs client-side." />
+<meta name="theme-color" content="#ffffff" />
+<!-- Favicon: red/yellow/green "traffic-light" dots, inlined so it works offline / on any host -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230d1117'/%3E%3Ccircle cx='16' cy='8' r='3.6' fill='%23dc2626'/%3E%3Ccircle cx='16' cy='16' r='3.6' fill='%23e0a400'/%3E%3Ccircle cx='16' cy='24' r='3.6' fill='%2316a34a'/%3E%3C/svg%3E" />
+<!-- Social / SEO. After deploy, replace og:image + og:url with your absolute Netlify URL for rich previews. -->
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Neural Proofs — deep learning, proven in your browser" />
+<meta property="og:description" content="Four tiny neural networks train live on the page and draw their own decision surfaces — proving why nonlinearity, depth, embeddings and data matter." />
+<meta property="og:image" content="og-image.svg" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Neural Proofs — deep learning, proven in your browser" />
+<meta name="twitter:description" content="Four tiny neural networks train live on the page and draw their own decision surfaces." />
+<meta name="twitter:image" content="og-image.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span class="dot"></span>Neural&nbsp;Proofs</div>
+    <a class="navlink" href="#s1">01 · Activations</a>
+    <a class="navlink" href="#s2">02 · Depth</a>
+    <a class="navlink" href="#s3">03 · Embeddings</a>
+    <a class="navlink" href="#s4">04 · Generalization</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <canvas id="hero-canvas"></canvas>
+  <div class="wrap">
+    <div class="kicker">Four experiments · run them yourself</div>
+    <h1>The math behind deep learning,<br /><span class="grad">proven in your browser.</span></h1>
+    <p class="lede">No slides, no hand-waving. Four tiny neural networks train live on this page and draw their own decision surfaces — showing exactly why nonlinearity, depth, embeddings and data are not optional.</p>
+    <div class="cta">
+      <a class="btn primary" href="#s1">Start the first proof →</a>
+      <button class="btn" id="run-all">▶ Run all experiments</button>
+      <a class="btn" href="#s4">Jump to generalization</a>
+    </div>
+    <div class="hero-badges">
+      <div><b>100%</b> in-browser compute</div>
+      <div><b>0</b> servers · <b>0</b> data sent</div>
+      <div><b>4</b> from-scratch networks</div>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- ============ S1 ============ -->
+<section class="exp" id="s1">
+  <div class="wrap">
+    <div class="sec-tag">S1 · Activations</div>
+    <h2>Activations exist for a reason.</h2>
+    <p class="claim">A model with no nonlinearity can only draw a <b>straight</b> boundary, so it cannot separate two interleaved rings. Same data, same training — the only change is the activation. Watch the linear model stall near <b>55%</b> while one ReLU layer wraps the ring to <b>~99%</b>.</p>
+
+    <div class="grid2">
+      <div class="card">
+        <h3>Linear + sigmoid</h3>
+        <p class="sub">no hidden nonlinearity → one straight cut</p>
+        <canvas id="canvas-s1-linear" class="viz" width="520" height="420"></canvas>
+        <div class="metric"><span class="val bad" id="acc-s1-linear">—</span><span class="lbl">test accuracy</span></div>
+      </div>
+      <div class="card">
+        <h3>1 ReLU hidden layer</h3>
+        <p class="sub">16 ReLU units → a curved boundary</p>
+        <canvas id="canvas-s1-relu" class="viz" width="520" height="420"></canvas>
+        <div class="metric"><span class="val good" id="acc-s1-relu">—</span><span class="lbl">test accuracy</span></div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span><i style="background:#16a34a"></i>class 1 (outer ring)</span>
+      <span><i style="background:#dc2626"></i>class 0 (inner ring)</span>
+      <span><i style="background:#cbd5e1"></i>model's decision surface</span>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" id="run-s1">▶ Train both</button>
+      <span class="status" id="status-s1">idle</span>
+    </div>
+    <div class="takeaway" id="takeaway-s1"></div>
+
+    <div class="callout"><b>The money shot:</b> the boundary picture. Only the activation changed, yet one model can bend space and the other can't.</div>
+
+    <div class="filename">linear_classifier.py</div>
+    <pre class="code"><span class="c"># The whole model is one matrix multiply — the boundary can only be a line.</span>
+<span class="k">import</span> torch, torch.nn <span class="k">as</span> nn
+
+model = nn.<span class="f">Sequential</span>(nn.<span class="f">Linear</span>(<span class="n">2</span>, <span class="n">1</span>), nn.<span class="f">Sigmoid</span>())   <span class="c"># no hidden nonlinearity</span>
+<span class="k">for</span> x, y <span class="k">in</span> rings_loader:
+    loss = <span class="f">bce</span>(model(x), y); loss.<span class="f">backward</span>(); opt.<span class="f">step</span>()
+<span class="c"># plateaus around 55% — a straight line can't split two rings</span></pre>
+  </div>
+</section>
+
+<!-- ============ S2 ============ -->
+<section class="exp" id="s2">
+  <div class="wrap">
+    <div class="sec-tag">S2 · Depth</div>
+    <h2>Depth without nonlinearity is a lie.</h2>
+    <p class="claim">Five stacked <b>linear</b> layers collapse to a single linear map, so a 5-layer linear net is no stronger than 1 layer — both fail the ring task <b>identically</b>. Insert ReLUs between the very same layers and it suddenly solves it.</p>
+
+    <div class="grid3">
+      <div class="card">
+        <h3>1 linear layer</h3>
+        <p class="sub">baseline straight cut</p>
+        <canvas id="canvas-s2-1" class="viz" width="360" height="320"></canvas>
+        <div class="metric"><span class="val bad" id="acc-s2-1">—</span><span class="lbl">acc</span></div>
+      </div>
+      <div class="card">
+        <h3>5 linear layers</h3>
+        <p class="sub">no activations between them</p>
+        <canvas id="canvas-s2-5" class="viz" width="360" height="320"></canvas>
+        <div class="metric"><span class="val bad" id="acc-s2-5">—</span><span class="lbl">acc</span></div>
+      </div>
+      <div class="card">
+        <h3>5 layers + ReLU</h3>
+        <p class="sub">same depth, activations added</p>
+        <canvas id="canvas-s2-relu" class="viz" width="360" height="320"></canvas>
+        <div class="metric"><span class="val good" id="acc-s2-relu">—</span><span class="lbl">acc</span></div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" id="run-s2">▶ Train all three</button>
+      <span class="status" id="status-s2">idle</span>
+    </div>
+    <div class="takeaway" id="takeaway-s2"></div>
+
+    <div class="callout"><b>The proof that nails it:</b> multiply the five weight matrices of the linear stack together. Their product is a single 2×2-shaped map — algebraically identical to one layer.</div>
+
+    <div class="eq" id="s2-matrices"></div>
+
+    <div class="filename">depth_5_relu.py</div>
+    <pre class="code"><span class="c"># W5·W4·W3·W2·W1 is just one matrix. ReLU is what breaks the collapse.</span>
+linear5 = nn.<span class="f">Sequential</span>(*[nn.<span class="f">Linear</span>(<span class="n">2</span>,<span class="n">2</span>) <span class="k">for</span> _ <span class="k">in</span> <span class="f">range</span>(<span class="n">5</span>)])         <span class="c"># collapses</span>
+relu5   = nn.<span class="f">Sequential</span>(*[layer <span class="k">for</span> L <span class="k">in</span> Ls <span class="k">for</span> layer <span class="k">in</span> (L, nn.<span class="f">ReLU</span>())])  <span class="c"># does not</span>
+W = <span class="f">reduce</span>(torch.<span class="f">matmul</span>, [L.weight <span class="k">for</span> L <span class="k">in</span> linear5])       <span class="c"># == a single layer</span></pre>
+  </div>
+</section>
+
+<!-- ============ S3 ============ -->
+<section class="exp" id="s3">
+  <div class="wrap">
+    <div class="sec-tag">S3 · Embeddings</div>
+    <h2>Embeddings learn similarity from nothing but next-token.</h2>
+    <p class="claim">A tiny model trained only to predict the next token — never told which words are related — makes the embedding table cluster related tokens on its own. <b>Similarity was never supplied.</b> The geometry of meaning emerges from next-token prediction alone.</p>
+
+    <div class="grid2">
+      <div class="card">
+        <h3>Learned embedding space (PCA → 2D)</h3>
+        <p class="sub">projected from the trained embedding table</p>
+        <canvas id="canvas-s3" class="viz" width="520" height="460"></canvas>
+        <div class="legend">
+          <span><i style="background:#dc2626"></i>animals</span>
+          <span><i style="background:#e0a400"></i>fruits</span>
+          <span><i style="background:#16a34a"></i>verbs</span>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Nearest neighbours</h3>
+        <p class="sub">cosine similarity in the learned space</p>
+        <div id="s3-neighbors" style="font-family:var(--mono);font-size:13px;color:var(--muted);line-height:2"></div>
+        <div class="callout" style="margin-top:18px">Every token's nearest neighbours share its category. <b>Emergent clustering is the proof.</b></div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" id="run-s3">▶ Train next-token model</button>
+      <span class="status" id="status-s3">idle</span>
+    </div>
+    <div class="takeaway" id="takeaway-s3"></div>
+
+    <div class="filename">embeddings.py</div>
+    <pre class="code"><span class="c"># The loss never mentions similarity. It only asks: what token comes next?</span>
+emb = nn.<span class="f">Embedding</span>(<span class="f">len</span>(vocab), <span class="n">8</span>)
+logits = emb(token) @ <span class="f">out_proj</span>            <span class="c"># predict next-token distribution</span>
+loss = <span class="f">cross_entropy</span>(logits, next_token)
+<span class="c"># after training: same-category tokens land together in emb.weight</span></pre>
+  </div>
+</section>
+
+<!-- ============ S4 ============ -->
+<section class="exp" id="s4">
+  <div class="wrap">
+    <div class="sec-tag">S4 · Generalization</div>
+    <h2>Memorization vs generalization — and data closes the gap.</h2>
+    <p class="claim">A high-capacity model on tiny data drives train accuracy to ~100% while held-out accuracy stays low — it <b>memorized</b>. Grow the dataset and the gap collapses. This is the course's whole point: <b>data is everything.</b></p>
+
+    <div class="grid2">
+      <div class="card">
+        <h3>Train vs held-out accuracy</h3>
+        <p class="sub">same model, three dataset sizes</p>
+        <canvas id="canvas-s4-bars" class="viz" width="520" height="360"></canvas>
+      </div>
+      <div class="card">
+        <h3>Generalization gap vs dataset size</h3>
+        <p class="sub">train accuracy − test accuracy</p>
+        <canvas id="canvas-s4-gap" class="viz" width="520" height="360"></canvas>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:18px">
+      <h3>The decision surface it learns (drag to rotate · scroll to zoom)</h3>
+      <p class="sub">predicted P(class 1) over the input plane — jagged islands = memorization</p>
+      <canvas id="canvas-s4-3d" class="viz" width="1040" height="460" style="cursor:grab"></canvas>
+      <div class="hint" id="s4-3d-hint">enter a dataset size below and press “Train &amp; show surface”</div>
+      <div class="surf-metrics" id="s4-surface-metrics"></div>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" id="run-s4">▶ Run all three sizes</button>
+      <label class="numctl">n =
+        <input id="s4-n" type="number" min="2" max="8000" step="1" value="20" />
+      </label>
+      <button class="btn" id="s4-custom">▶ Train &amp; show surface</button>
+      <span class="pbar" id="s4-pbar"><i></i></span>
+      <span class="status" id="status-s4">idle</span>
+    </div>
+    <div class="takeaway" id="takeaway-s4"></div>
+
+    <div class="filename">generalization.py</div>
+    <pre class="code"><span class="c"># One over-parameterized net, three dataset sizes. Watch the gap shrink.</span>
+<span class="k">for</span> n <span class="k">in</span> [<span class="n">20</span>, <span class="n">200</span>, <span class="n">2000</span>]:
+    Xtr, ytr, Xte, yte = <span class="f">make_split</span>(n)
+    net = <span class="f">MLP</span>(hidden=[<span class="n">32</span>,<span class="n">32</span>])          <span class="c"># way more params than 20 points need</span>
+    <span class="f">fit</span>(net, Xtr, ytr)
+    gap = <span class="f">acc</span>(net, Xtr, ytr) - <span class="f">acc</span>(net, Xte, yte)   <span class="c"># huge at 20, ~0 at 2000</span></pre>
+  </div>
+</section>
+
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

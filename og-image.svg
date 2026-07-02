@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#ffffff"/>
+  <rect width="1200" height="630" fill="url(#g)"/>
+  <defs>
+    <radialGradient id="g" cx="50%" cy="0%" r="90%">
+      <stop offset="0%" stop-color="#fff7ed"/>
+      <stop offset="45%" stop-color="#f6fbf7"/>
+      <stop offset="100%" stop-color="#ffffff"/>
+    </radialGradient>
+  </defs>
+
+  <!-- brand -->
+  <g transform="translate(80,86)">
+    <circle cx="8" cy="6" r="9" fill="#dc2626"/>
+    <circle cx="30" cy="6" r="9" fill="#e0a400"/>
+    <circle cx="52" cy="6" r="9" fill="#16a34a"/>
+    <text x="76" y="14" font-family="'Space Grotesk',Inter,sans-serif" font-size="30" font-weight="700" fill="#16a34a">Neural Proofs</text>
+  </g>
+
+  <!-- headline -->
+  <text x="80" y="270" font-family="'Space Grotesk',Inter,sans-serif" font-size="76" font-weight="700" fill="#161a20">The math behind deep</text>
+  <text x="80" y="356" font-family="'Space Grotesk',Inter,sans-serif" font-size="76" font-weight="700">
+    <tspan fill="#161a20">learning, </tspan><tspan fill="#dc2626">proven </tspan><tspan fill="#e0a400">in your </tspan><tspan fill="#16a34a">browser.</tspan>
+  </text>
+
+  <text x="80" y="428" font-family="Inter,sans-serif" font-size="30" fill="#5c6470">Four tiny neural networks train live and draw their own decision surfaces.</text>
+
+  <!-- four proof chips -->
+  <g font-family="'JetBrains Mono',monospace" font-size="22" font-weight="600">
+    <rect x="80"  y="486" width="230" height="64" rx="14" fill="#ffffff" stroke="#e6e8ee"/>
+    <text x="106" y="525" fill="#dc2626">01 Activations</text>
+    <rect x="330" y="486" width="180" height="64" rx="14" fill="#ffffff" stroke="#e6e8ee"/>
+    <text x="356" y="525" fill="#e0a400">02 Depth</text>
+    <rect x="530" y="486" width="250" height="64" rx="14" fill="#ffffff" stroke="#e6e8ee"/>
+    <text x="556" y="525" fill="#16a34a">03 Embeddings</text>
+    <rect x="800" y="486" width="290" height="64" rx="14" fill="#ffffff" stroke="#e6e8ee"/>
+    <text x="826" y="525" fill="#dc2626">04 Generalization</text>
+  </g>
+</svg>
