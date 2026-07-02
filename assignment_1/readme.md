@@ -21,8 +21,7 @@ neural-proof/
 ├── app.js          # all logic: from-scratch ML, canvas viz, experiments, wiring
 ├── og-image.svg    # 1200×630 social-share preview image
 ├── netlify.toml    # publish dir (".") + a couple of safe headers
-├── README.md       # run + deploy instructions
-└── architecture.md # this file
+└── readme.md       # this file — full project + architecture documentation
 ```
 
 `.claude/launch.json` (one level up, in the repo root) defines the local
