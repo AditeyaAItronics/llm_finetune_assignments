@@ -33,8 +33,15 @@ A lab-run, hands-on program where students collaborate to build, train, and rele
 
 ## Repo structure
 
-Each session gets its own folder: code, model, notebook, and a short write-up of results.
+One folder per session — code, model, notebook, and a short write-up of what I found.
 
+├── S01-transformer-foundations/
+│   ├── README.md        # what I built, results, what I learned
+│   ├── model.py          # model definition
+│   ├── train.ipynb       # training notebook
+│   └── requirements.txt
+├── S02-tokenization/
+...
 ...
 
 ## Setup / License unchanged.
