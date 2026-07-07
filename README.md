@@ -10,8 +10,8 @@ A lab-run, hands-on program where students collaborate to build, train, and rele
 
 | # | Session | Status |
 |---|---|---|
-| 1 | Transformer Foundations | ⬜ |
-| 2 | Tokenization & Vocabulary Design | ⬜ |
+| 1 | Transformer Foundations | ✅ |
+| 2 | Tokenization & Vocabulary Design | ✅ |
 | 3 | Data Collection & Sourcing | ⬜ |
 | 4 | Data Cleaning & Deduplication | ⬜ |
 | 5 | Data Mixtures & Curriculum | ⬜ |
