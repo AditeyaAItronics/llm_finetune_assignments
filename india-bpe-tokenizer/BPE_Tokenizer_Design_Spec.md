@@ -64,6 +64,16 @@ gate:   every X_i <= 1.2          # miss this on any language and you're out
 score = 1000 / Δ
 ```
 
+```mermaid
+flowchart LR
+    A[Encode each corpus] --> B["X_i = tokens_i / words_i<br/>(en, hi, te, bn)"]
+    B --> C{All X_i ≤ 1.2?}
+    C -- no --> D[DISQUALIFIED<br/>score = 0]
+    C -- yes --> E[sort X_i]
+    E --> F["Δ = X_max − X_min"]
+    F --> G["S = 1000 / Δ"]
+```
+
 Here's the thing everyone misses on first read: **the score doesn't care how low your fertility is, only how *even* it is.** Absolute fertility only matters for clearing the 1.2 gate. After that, it's all about Δ.
 
 So the objective is not "compress hard," it's "compress *equally* hard across four scripts." Two very different problems.
@@ -97,7 +107,7 @@ Three assumptions I'm flagging (they're printed in the widget + README):
 - **A2:** one shared 10k tokenizer computes all four `X_i`. Not four separate tokenizers.
 - **A3:** grader may use my shipped corpus or their own fetch — I ship the `oldid`s so both line up.
 
-If any of these is wrong, it's a 5-minute change, not a redesign. See §Appendix E for the questions I'd ask them.
+If any of these is wrong, it's a 5-minute change, not a redesign. See Appendix E for the locked assumptions and their alternatives.
 
 ---
 
@@ -174,7 +184,17 @@ Going byte-level because:
 - **256-byte base covers all four scripts** for 256 of my 10k budget. Cheap.
 - **Merges serialize cleanly** and I can re-implement the encoder in ~150 lines of JS for the in-browser verifier.
 
-One thing to keep honest about: byte-level turns each multi-byte Indic char into a *sequence* of byte-tokens before merges kick in. So Indic languages need more merges than English to claw fertility back down to ~1.0. That imbalance is exactly what §7 fixes. I'll set `add_prefix_space=True` and document it, since word-initial token identity affects counts, and the JS port replicates the same byte→visible-byte table and prefix rule.
+Here's the whole reason Indic needs more merge budget than English — one Telugu word, before and after merges:
+
+```mermaid
+flowchart LR
+    W["భారత<br/>(1 word)"] --> U["UTF-8 bytes<br/>9 bytes → 9 base tokens"]
+    U --> M["apply learned merges<br/>(byte pairs → syllables → word)"]
+    M --> T["1–2 tokens<br/>fertility ≈ 1.0"]
+    M -.->|too few merges<br/>for this script| T2["6–9 tokens<br/>fertility ≫ 1.2 ✗"]
+```
+
+The balancing loop (§7) exists precisely to buy each script *enough* merges to land in the good box, not the bad one. One thing to keep honest about: byte-level turns each multi-byte Indic char into a *sequence* of byte-tokens before merges kick in. So Indic languages need more merges than English to claw fertility back down to ~1.0. That imbalance is exactly what §7 fixes. I'll set `add_prefix_space=True` and document it, since word-initial token identity affects counts, and the JS port replicates the same byte→visible-byte table and prefix rule.
 
 Library: HuggingFace `tokenizers`, exact version pinned. It's deterministic given fixed input + vocab size, and its `tokenizer.json` loads in both Python and a WASM build I can run in the browser.
 
@@ -219,6 +239,23 @@ for _ in range(MAX_ITERS):           # ~20 is plenty
 export(best.tok)
 ```
 
+```mermaid
+flowchart TD
+    S["seed weights r = (1,1,1,1)<br/>(or from curve sweep)"] --> T[train joint 10k BPE on<br/>weighted corpus mix]
+    T --> M["measure X_en, X_hi, X_te, X_bn"]
+    M --> G{all X_i ≤ 1.2<br/>and Δ improved?}
+    G -- yes --> K[keep as best]
+    G -- no --> N[ ]
+    K --> U["r[worst] += step<br/>r[best] −= step"]
+    N --> U
+    U --> P{Δ stalled?}
+    P -- yes --> A["step //= 2 (anneal)"]
+    P -- no --> T
+    A --> Q{step == 0?}
+    Q -- no --> T
+    Q -- yes --> E[export best tokenizer]
+```
+
 Only 3 free ratios (pin one language at 1), so the search is tiny and each retrain on four short articles is seconds-to-minutes. Optional accelerator: sweep standalone vocab sizes per language first to sketch each fertility curve `f_i(n)`, then seed `r` smartly (Indic > 1) instead of starting flat.
 
 **Anti-overfit / honesty check:** split each corpus 90/10 by paragraph, tune only on the 90%, and *report* fertility on the held-out 10% in the widget. If held-out Δ ≈ train Δ, the balance is real. (By assignment the eval text *is* the article, so train≈eval is expected and fine — the held-out number is a trust signal, not a second eval.)
@@ -229,7 +266,7 @@ Only 3 free ratios (pin one language at 1), so the search is tiny and each retra
 
 ## 8. Build pipeline
 
-Pinned env: Python 3.11, `tokenizers` (exact patch in `requirements.txt`), `regex`, `requests`. No RNG anywhere — mixture is integer replication, BPE merge selection is deterministic given the pinned lib. `manifest.json` records versions + a preprocessing hash so env drift is visible.
+Pinned env: managed with **`uv`** — `pyproject.toml` + `uv.lock` pin Python 3.11 and exact versions of `tokenizers`, `regex`, `requests`. The lockfile is what guarantees the grader (and future me) rebuild against identical deps. Run everything via `uv run ...`. No RNG anywhere — mixture is integer replication, BPE merge selection is deterministic given the pinned lib. `manifest.json` also records resolved versions + a preprocessing hash so env drift is visible.
 
 Scripts (one command wires them together via `build.sh`):
 
@@ -245,6 +282,98 @@ build_widget.py     # drop artifacts+corpus into dist/, stamp provenance
 ```
 
 `build.sh`: `fetch → preprocess → (sweep) → train_balance → export → score → build_widget`. Only `fetch` needs network; everything else runs offline from the shipped files.
+
+```mermaid
+flowchart LR
+    subgraph net [needs network]
+        F["fetch_corpus.py<br/>pin oldids, extracts API"]
+    end
+    F --> C[("corpus/*.txt<br/>+ manifest")]
+    C --> P["preprocess.py<br/>NFC + cleanup (shared)"]
+    P --> SW["curve_sweep.py<br/>(optional seed)"]
+    SW --> TB["train_balance.py<br/>control loop §7"]
+    TB --> EX["export_artifacts.py<br/>assert vocab == 10000"]
+    EX --> AR[("tokenizer.json, vocab.json,<br/>merges.txt, tokens.csv")]
+    AR --> SC["score.py<br/>compute X_i, Δ, S"]
+    AR --> BW["build_widget.py"]
+    P --> SC
+    BW --> D[("dist/ → Netlify")]
+    SC --> D
+```
+
+---
+
+## 8a. Environment with `uv` (exact commands)
+
+The whole project is a `uv` app. `pyproject.toml` declares deps + the Python floor; `uv.lock` pins exact resolved versions; `.python-version` pins the interpreter. That trio is the reproducibility backbone — the grader gets the same bytes because they resolve the same lockfile.
+
+```bash
+# one-time: create the project (already done in this repo)
+uv init --app --python 3.11
+uv add "tokenizers>=0.20,<0.22" "regex>=2024.5.15" "requests>=2.32"
+uv add --dev ruff
+
+# day-to-day
+uv sync                       # make .venv match pyproject + uv.lock
+uv run python src/score.py    # run anything inside the locked env
+uv run ./build.sh             # full pipeline
+uv lock --upgrade             # only when intentionally bumping versions
+```
+
+`pyproject.toml` essentials:
+
+```toml
+[project]
+name = "india-bpe-tokenizer"
+requires-python = ">=3.11"
+dependencies = ["tokenizers>=0.20,<0.22", "regex>=2024.5.15", "requests>=2.32"]
+
+[dependency-groups]
+dev = ["ruff>=0.6"]
+
+[tool.uv]
+package = false               # it's an app, not an installable library
+```
+
+Rules of thumb: **commit `uv.lock`** (it's the pin), never `pip install` into the venv by hand, and always invoke scripts through `uv run` so they use the locked interpreter + deps.
+
+---
+
+## 8b. Script-by-script logic
+
+Each `src/*.py` is small and single-purpose. Here's exactly what each one does and the non-obvious decisions inside.
+
+### `common.py`
+Single source of truth for constants + paths: `LANGS = [en, hi, te, bn]`, `VOCAB_SIZE = 10000`, `FERTILITY_GATE = 1.2`, `BYTE_BASE = 256`, the `ARTICLES` map (`lang → (api_host, title)`), and all directory paths. Everything imports from here so there's no drift.
+
+### `preprocess.py` (shared, imported everywhere)
+`preprocess(text)`: NFC-normalize → strip `[1]`-style ref markers → collapse horizontal whitespace → strip per-line → tidy blank lines. **Idempotent** (running it twice changes nothing), so it's safe that `fetch` writes preprocessed text *and* `train`/`score` re-apply it. `word_count(text)` = `len(re.findall(r"\S+", text))` — the denominator of every `X_i`. The JS widget mirrors these two functions exactly (same regexes + `normalize("NFC")`); a test diffs them.
+
+### `fetch_corpus.py` (step 1 — the scrape)
+For each language: (1) `prop=revisions` to resolve the **current `oldid`** + timestamp — the revision we pin; (2) `prop=extracts&explaintext=1` to pull **plain text** (not HTML); (3) `preprocess()`; (4) write `corpus/<lang>.txt` and record `oldid`, timestamp, `sha256(text)`, char/word counts in `corpus/manifest.json`. Sends a descriptive `User-Agent` (Wikipedia requires it) and follows redirects (`redirects=1`) so title variants resolve. The `extracts` API returns the current revision, and we log which `oldid` that was — the shipped text file is the actual source of truth.
+
+### `curve_sweep.py` (optional diagnostic)
+Trains a standalone byte-level BPE per language at sizes `[500…8000]` and prints fertility at each. Shows how "expensive" each script is → used to seed the balancing weights. Produces no shipped artifact.
+
+### `train_balance.py` (step 2 — primary path)
+The core. Loads corpora; starts weights `{en:1, hi:1, te:1, bn:1}`. Each iteration: build the training stream by **replicating each language's paragraphs `weights[lang]` times** (integer replication = deterministic), train one joint `ByteLevelBPE(vocab_size=10000, initial_alphabet=ByteLevel.alphabet())` (the full-byte alphabet guarantees zero UNK), then measure the four fertilities. If the gate passes and the spread `Δ` is a new best, **save `tokenizer.json`** and record `balance_meta.json`. Then nudge: `weights[worst] += step`, ease `weights[best] -= step`; when `Δ` stalls for `PATIENCE` iters, halve `step` (anneal); stop when `step` hits 0 or `MAX_ITERS`. Raises if nothing ever passes the gate (signals corpus/vocab problem).
+
+> Gotcha baked in: with a small corpus the trainer can stop below 10,000 merges (not enough distinct pairs). The real "India" articles are large enough to reach 10k; `export` warns loudly if not.
+
+### `build_union.py` (step 2 — fallback)
+Only if the joint path can't tighten `Δ`. Trains four standalone BPEs, reads each ordered `merges.txt`, **round-robin interleaves by rank** (rank-0 of every language, then rank-1, …) with dedup up to the `10000−256` merge budget, then rebuilds one BPE from the byte alphabet + merged ordered merges. Round-robin gives each language equal footing (good for balance) at the cost of globally-optimal frequency ordering. Keep whichever path gives the smaller *reproducible* `Δ`.
+
+### `export_artifacts.py` (step 3)
+Loads `tokenizer.json`; **asserts vocab == 10000** (warns otherwise); writes `vocab.json` + `merges.txt` (`tok.model.save`) and a friendly `tokens.csv` (`id, token, decoded-UTF8, script`). The `decoded` column inverts the byte-level visible-byte map back to real UTF-8 so Indic tokens are readable; `script` is inferred from Unicode ranges (Devanagari/Telugu/Bengali/Latin/shared). Then recomputes per-language tokens/words/`X`, `Δ`, and `score`, and merges them into `dist/tokenizer/manifest.json` along with resolved library versions.
+
+### `score.py` (step 4 — the canonical scorer, grader runs this)
+Minimal + dependency-light. Loads tokenizer + shipped corpus, applies the **same** `preprocess`, computes `tokens/words/X` per language, `Δ`, `score`; prints JSON; exits non-zero if any `X_i > 1.2`. Output must match `manifest.results` and the widget to 4 dp.
+
+### `build_widget.py` (step 5)
+Copies `corpus/*.txt` → `dist/corpus/`, the `widget/*` static files → `dist/`, and the results manifest → `dist/manifest.json`. After it runs, `dist/` is a self-contained static site ready for `netlify deploy --dir=dist --prod`, with the tokenizer already at `dist/tokenizer/`.
+
+### `build.sh`
+`uv sync` → `fetch_corpus` → `train_balance` → `export_artifacts` → `score` → `build_widget`, each via `uv run`. Only step 1 needs network. Commented-out lines enable the curve sweep and the union fallback.
 
 ---
 
@@ -320,6 +449,18 @@ for L in langs:
 One token of mismatch on any language and the deploy is blocked. That's what lets me claim, honestly, that what the widget shows is what the grader's Python will produce. Same deal for `preprocess()` — JS and Python diffed on Indic fixtures (virama, matras, ZWJ/ZWNJ, khanda-ta — see Appendix B).
 
 So three independent things compute the same numbers: the build's `manifest.json`, `score.py`, and the browser. CI asserts all three agree to 4 dp. That's the whole trust story.
+
+```mermaid
+flowchart TD
+    TOK[("tokenizer.json<br/>+ corpus/*.txt")] --> B["build → manifest.json.results"]
+    TOK --> S["score.py (grader runs this)"]
+    TOK --> W["browser widget (WASM/JS)"]
+    B --> CMP{agree to 4 dp?}
+    S --> CMP
+    W --> CMP
+    CMP -- no --> BLK["block deploy — fix mismatch"]
+    CMP -- yes --> OK["deploy ✓ numbers are trustworthy"]
+```
 
 ---
 
@@ -435,7 +576,7 @@ Say I measure `X_en=1.02, X_hi=1.06, X_te=1.09, X_bn=1.05`. Gate ✓. min=1.02 (
 
 ```
 india-bpe/
-├── build.sh  requirements.txt
+├── build.sh  pyproject.toml  uv.lock
 ├── corpus/            en.txt hi.txt te.txt bn.txt  manifest.json   (shipped)
 ├── src/               fetch_corpus.py preprocess.py curve_sweep.py
 │                      train_balance.py build_union.py export_artifacts.py
@@ -454,7 +595,9 @@ india-bpe/
 - **NFC** — Unicode canonical composition; makes Indic counts stable.
 - **`r_i`** — integer replication factor for language `i` during joint training.
 
-## Appendix E — questions for the grader
+## Appendix E — assumptions & clarifications
+
+These are ambiguities in the assignment wording that materially affect the score. I've locked a defensible default for each (see §3, A1–A3) and noted the alternative, so the design is deliberate rather than blind to the ambiguity. If I can reach the grader, these are the points I'd confirm.
 
 1. Denominator: **total** words (my default) or **unique** words?
 2. Eval text: **full article** (my default) or a fixed slice (first 5000 words)?
