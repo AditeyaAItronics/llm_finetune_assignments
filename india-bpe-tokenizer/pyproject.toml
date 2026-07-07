@@ -1,0 +1,29 @@
+[project]
+name = "india-bpe-tokenizer"
+version = "0.1.0"
+description = "10,000-token byte-level BPE tokenizer balanced across English, Hindi, Telugu, and Bengali (Wikipedia 'India' article)."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Amit Kayal", email = "amit.kayal@expeditecommerce.com" }]
+
+# Runtime dependencies. Exact resolved versions are pinned in uv.lock —
+# that lockfile is what makes the grader's re-run byte-identical to ours.
+dependencies = [
+    "tokenizers>=0.20,<0.22",
+    "regex>=2024.5.15",
+    "requests>=2.32",
+]
+
+[dependency-groups]
+# dev-only tools; not needed to build or score. Install with: uv sync --group dev
+dev = [
+    "ruff>=0.6",
+]
+
+[tool.uv]
+# This is an application, not an installable library — don't try to build a wheel.
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
