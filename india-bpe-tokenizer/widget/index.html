@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>India BPE Tokenizer — en · hi · te · bn</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="wrap">
+    <h1>India BPE Tokenizer</h1>
+    <p class="sub">One 10,000-token byte-level BPE across English · Hindi · Telugu · Bengali (Wikipedia "India").
+      Every number below is computed live in your browser from the tokenizer + article text — nothing is hard-coded.</p>
+
+    <div id="status" class="card">Loading tokenizer and corpora…</div>
+
+    <div class="card score-card">
+      <div class="score-item">
+        <div class="score-lbl">Self-score = 1000 / Δ</div>
+        <div class="score-big" id="score">—</div>
+      </div>
+      <div class="score-item">
+        <div class="score-lbl">Spread Δ (X_max − X_min)</div>
+        <div class="score-big" id="spread" style="font-size:30px">—</div>
+      </div>
+      <div class="score-item">
+        <span class="badge" id="gate">—</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Per-language ratios</h2>
+      <table id="results"></table>
+      <div class="spread-note">Rows sorted by X (highest = worst). <span style="color:var(--accent)">Blue</span> = X_max, <span style="color:var(--good)">green</span> = X_min. Score depends only on the spread between them.</div>
+    </div>
+
+    <div class="card">
+      <h2>Calculation</h2>
+      <div class="calc" id="calc"></div>
+    </div>
+
+    <div class="card">
+      <h2>Interpretation</h2>
+      <div class="row">
+        <button id="btnTotal" class="active">tokens ÷ total words</button>
+        <button id="btnUnique">tokens ÷ unique words</button>
+      </div>
+      <p class="footer" id="modeNote"></p>
+      <p class="footer">Assumptions: eval text = full pinned article · one shared 10k tokenizer for all languages · special tokens counted in the 10k.</p>
+    </div>
+
+    <div class="card">
+      <h2>Downloads</h2>
+      <div class="dl-row">
+        <a class="btn" href="tokenizer/tokenizer.json" download>tokenizer.json</a>
+        <a class="btn" href="tokenizer/vocab.json" download>vocab.json</a>
+        <a class="btn" href="tokenizer/merges.txt" download>merges.txt</a>
+        <a class="btn" href="tokenizer/tokens.csv" download>tokens.csv</a>
+        <a class="btn" href="manifest.json" download>manifest.json</a>
+      </div>
+      <p class="footer">Direct-download link for submission: <code id="tokUrl">./tokenizer/tokenizer.json</code></p>
+    </div>
+
+    <div class="card viewer">
+      <h2>Tokenizer (<span id="vocabCount">—</span> tokens)</h2>
+      <div class="row" style="margin-bottom:12px">
+        <input type="text" id="search" placeholder="search token or decoded text…" />
+      </div>
+      <table id="viewer"></table>
+    </div>
+
+    <p class="footer" id="prov"></p>
+  </div>
+
+  <script src="preprocess.js"></script>
+  <script src="bpe.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
