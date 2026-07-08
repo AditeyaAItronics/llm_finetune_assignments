@@ -1,6 +1,6 @@
 # India BPE Tokenizer — Design Doc
 
-_Author: Amit Kayal · v3 · 2026-07-08 · status: design, about to build_
+_Author: Aditeya Kayal · v3 · 2026-07-08 · status: design, about to build_
 
 This is my working design doc for the multilingual BPE assignment. It's written the way I'd hand it to another engineer picking up the repo: what I'm building, the decisions I've already made and why, the parts that will bite us, and the exact steps to ship. If you're skimming, read §2 (the scoring game), §7 (how I balance the languages), and §11 (why the numbers are trustworthy) — those are the parts that actually matter.
 
