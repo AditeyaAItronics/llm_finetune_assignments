@@ -9,6 +9,14 @@ A single **byte-level BPE tokenizer** with a **10,000-token vocabulary**, traine
 
 > Numbers below are computed by the pipeline and are **not** hand-edited. Anyone can reproduce them with `python src/score.py` against the shipped tokenizer and corpus.
 
+### 👋 New here? Read in this order
+
+1. **This file (`readme.md`)** — what the project is, the scoring model, and how to build it. Start here and run it.
+2. **[`BPE_Tokenizer_Design_Spec.md`](./BPE_Tokenizer_Design_Spec.md)** — the *why*: the balancing algorithm, byte-level BPE reasoning, interpretation decisions, and per-script logic.
+3. **[`DEPLOYMENT.md`](./DEPLOYMENT.md)** — build → verify → deploy, with a step-by-step of every script (input / output / what it does) and the Netlify + submission steps.
+
+Short version: **read this → `./build.sh` → design doc to understand → deployment doc to ship.**
+
 ---
 
 ## Results
