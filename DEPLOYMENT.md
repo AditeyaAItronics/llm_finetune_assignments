@@ -34,7 +34,75 @@ dist/
 └── _headers                                                # charset + CORS
 ```
 
+**`tokenizer.json` is generated here — it is not in the repo.** `train_balance.py` trains the BPE and writes `dist/tokenizer/tokenizer.json` (your submission file); `export_artifacts.py` then produces `vocab.json`, `merges.txt`, `tokens.csv`, and `manifest.json` beside it. Because `dist/` is gitignored (regenerated every build), you won't see these files until `./build.sh` runs. That's expected — nothing is missing.
+
 If the run prints `WARNING: vocab size ... != 10000`, the corpus was too small to learn 10k merges — re-check that all four articles fetched. (The real "India" articles are large enough.)
+
+---
+
+## 1a. What `build.sh` actually runs (step by step)
+
+`build.sh` is just an ordered sequence of `uv run python src/<script>.py` calls. All scripts run **from the repo root**, so relative paths (`corpus/`, `dist/`) resolve correctly. Each stage's output is the next stage's input. Here is exactly what each call does:
+
+### Step 0 — `uv sync`
+- **Command:** `uv sync`
+- **Input:** `pyproject.toml`, `uv.lock`
+- **Output:** a `.venv` with the exact pinned deps (`tokenizers`, `regex`, `requests`)
+- **Does:** makes the environment reproducible before anything runs. Everything after this uses `uv run` so it executes inside this venv.
+
+### Step 1 — `src/fetch_corpus.py`  (needs network)
+- **Command:** `uv run python src/fetch_corpus.py`
+- **Input:** the `ARTICLES` map in `src/common.py` (the four Wikipedia titles/hosts). Network access to `*.wikipedia.org`.
+- **Output:** `corpus/en.txt`, `corpus/hi.txt`, `corpus/te.txt`, `corpus/bn.txt` (preprocessed plain text) and `corpus/manifest.json` (oldids, timestamps, sha256, char/word counts).
+- **Does:** resolves each article's current revision id, pulls its plain-text extract via the MediaWiki API, runs `preprocess()`, and writes the pinned corpus. This is the only step that touches the internet.
+
+### Step 2 — `src/train_balance.py`  (primary path)
+- **Command:** `uv run python src/train_balance.py`
+- **Input:** `corpus/*.txt`
+- **Output:** `dist/tokenizer/tokenizer.json` (**the tokenizer**) and `dist/tokenizer/balance_meta.json` (chosen weights + best spread)
+- **Does:** trains one joint 10,000-token byte-level BPE, running the balancing control loop — replicate each language's text by an integer weight, train, measure the four fertilities, nudge weights toward equality, keep the tokenizer with the smallest spread that passes the ≤1.2 gate.
+
+> _Fallback:_ `src/build_union.py` (commented out in `build.sh`) is an alternative that unions four per-language BPEs. Use it only if the primary path's spread is unsatisfactory. Same output file (`dist/tokenizer/tokenizer.json`).
+>
+> _Optional diagnostic:_ `src/curve_sweep.py` (also commented out) just **prints** per-language fertility-vs-vocab curves; it writes no files.
+
+### Step 3 — `src/export_artifacts.py`
+- **Command:** `uv run python src/export_artifacts.py`
+- **Input:** `dist/tokenizer/tokenizer.json`, `corpus/*.txt`, `corpus/manifest.json`
+- **Output:** `dist/tokenizer/vocab.json`, `merges.txt`, `tokens.csv`, and a merged `dist/tokenizer/manifest.json` (adds `vocab_size`, library versions, and the `results` block with per-language `X`, spread, score)
+- **Does:** asserts vocab == 10,000 (warns otherwise), writes the downloadable artifacts and a human-readable token list, and records the computed results into the manifest.
+
+### Step 4 — `src/score.py`  (the canonical scorer)
+- **Command:** `uv run python src/score.py`
+- **Input:** `dist/tokenizer/tokenizer.json`, `corpus/*.txt`
+- **Output:** prints JSON to stdout (per-language tokens/words/`X`, `X_max`, `X_min`, spread, score); **exits non-zero if any `X_i > 1.2`**
+- **Does:** the independent verification the grader will run. Loads the tokenizer, applies the same `preprocess()`, and computes the numbers from scratch. Must match `manifest.json` to 4 dp.
+
+### Step 5 — `src/build_widget.py`
+- **Command:** `uv run python src/build_widget.py`
+- **Input:** `widget/*` (static files), `corpus/*.txt`, `dist/tokenizer/manifest.json`
+- **Output:** the assembled `dist/` — copies widget files to `dist/`, corpora to `dist/corpus/`, manifest to `dist/manifest.json`, and writes `dist/_headers`
+- **Does:** turns everything into the self-contained static site you deploy. After this, `dist/` is ready for Netlify.
+
+### Shared modules (not called directly)
+- **`src/common.py`** — constants + paths (LANGS, VOCAB_SIZE=10000, gate, article map). Imported by every script.
+- **`src/preprocess.py`** — `preprocess()` + `word_count()`. Imported by fetch, train, export, and score so the text is cleaned identically everywhere. Mirrored in `widget/preprocess.js`.
+
+### Flow at a glance
+
+```
+common.py / preprocess.py  (imported everywhere)
+        │
+fetch_corpus.py ──► corpus/*.txt + corpus/manifest.json
+        │
+train_balance.py ──► dist/tokenizer/tokenizer.json
+        │           (fallback: build_union.py · diagnostic: curve_sweep.py)
+export_artifacts.py ──► vocab.json, merges.txt, tokens.csv, manifest.json
+        │
+score.py ──► prints/verifies numbers (gate check)
+        │
+build_widget.py ──► dist/ (deployable site)
+```
 
 ---
 
