@@ -1,6 +1,6 @@
 # India BPE Tokenizer — Design Doc
 
-_Author: Aditeya Kayal · v3 · 2026-07-08 · status: design, about to build_
+_Author: Amit Kayal · v3 · 2026-07-08 · status: design, about to build_
 
 This is my working design doc for the multilingual BPE assignment. It's written the way I'd hand it to another engineer picking up the repo: what I'm building, the decisions I've already made and why, the parts that will bite us, and the exact steps to ship. If you're skimming, read §2 (the scoring game), §7 (how I balance the languages), and §11 (why the numbers are trustworthy) — those are the parts that actually matter.
 
@@ -258,7 +258,7 @@ flowchart TD
 
 Only 3 free ratios (pin one language at 1), so the search is tiny and each retrain on four short articles is seconds-to-minutes. Optional accelerator: sweep standalone vocab sizes per language first to sketch each fertility curve `f_i(n)`, then seed `r` smartly (Indic > 1) instead of starting flat.
 
-**Anti-overfit / honesty check:** split each corpus 90/10 by paragraph, tune only on the 90%, and *report* fertility on the held-out 10% in the widget. If held-out Δ ≈ train Δ, the balance is real. (By assignment the eval text *is* the article, so train≈eval is expected and fine — the held-out number is a trust signal, not a second eval.)
+**Anti-overfit / honesty check (optional, not yet wired in):** the intended enhancement is to split each corpus 90/10 by paragraph, tune only on the 90%, and *report* fertility on the held-out 10%. If held-out Δ ≈ train Δ, the balance is real. (By assignment the eval text *is* the article, so train≈eval is expected and fine — the held-out number is a trust signal, not a second eval.) The current build does **not** compute this; it's a straightforward add to `train_balance.py` + `export_artifacts.py` if we want the extra signal.
 
 **Fallback** if mixture weighting can't tighten Δ enough: train four standalone BPEs sized so each hits a common fertility, then union them into one 10k tokenizer (union the byte base, concatenate merges under a single global rank, dedup, trim/pad to 10k). More direct control, but rank-reconciliation makes encoding slightly less globally optimal. I keep whichever path gives the smaller *reproducible* Δ.
 
@@ -384,17 +384,18 @@ Copies `corpus/*.txt` → `dist/corpus/`, the `widget/*` static files → `dist/
 - `tokenizer.json` — the real thing, loads in Python and WASM. Source of truth. `vocab_size == 10000` or the build dies.
 - `vocab.json` — `{token: id}`, the "list of all tokens" for view/download.
 - `merges.txt` — ordered merge rules, rank = line order.
-- `tokens.csv` — `id,token,decoded,lang_tag` — human-readable, so the token viewer isn't gibberish. `lang_tag` = which script the token mostly serves (Latin/Deva/Telu/Beng/shared).
+- `tokens.csv` — `id,token,decoded,script` — human-readable, so the token viewer isn't gibberish. `script` = which script the token mostly serves (Latin/Devanagari/Telugu/Bengali/shared).
 - `manifest.json` — oldids, hashes, lib versions, mixture weights, and the computed results block:
 
 ```json
 "results": {
   "interpretation": "tokens_per_total_word",
   "per_language": { "en": {"tokens":0,"words":0,"X":0.0}, "hi":{}, "te":{}, "bn":{} },
-  "X_max":0.0, "X_min":0.0, "spread":0.0, "score":0.0,
-  "held_out": {"en":0.0,"hi":0.0,"te":0.0,"bn":0.0,"spread":0.0}
+  "X_max":0.0, "X_min":0.0, "spread":0.0, "score":0.0, "gate_pass":true
 }
 ```
+
+(An optional `held_out` block — §8.5 — is not emitted by the current build.)
 
 `dist/corpus/{en,hi,te,bn}.txt` — the post-preprocessing text, so widget and grader score identical bytes.
 
@@ -402,7 +403,7 @@ Copies `corpus/*.txt` → `dist/corpus/`, the `widget/*` static files → `dist/
 
 ## 10. `score.py` — the number that counts
 
-This is the file the grader runs. It's deliberately boring and short:
+This is the file the grader runs. It's deliberately boring and short (paths come from `common.py`; it reads the committed `corpus/` and the built `dist/tokenizer/`):
 
 ```python
 import json
@@ -414,7 +415,7 @@ tok = Tokenizer.from_file("dist/tokenizer/tokenizer.json")
 
 res = {}
 for L in LANGS:
-    text  = preprocess(open(f"dist/corpus/{L}.txt", encoding="utf-8").read())
+    text  = preprocess(open(f"corpus/{L}.txt", encoding="utf-8").read())
     words = word_count(text)
     toks  = len(tok.encode(text, add_special_tokens=False).ids)
     res[L] = {"tokens": toks, "words": words, "X": toks/words}
@@ -433,12 +434,12 @@ Its output must match `manifest.results` *and* the widget, to 4 dp. If they disa
 
 ## 11. Making the numbers trustworthy (JS ↔ Python parity)
 
-The widget has to *compute* the numbers in the browser, not display constants. So I need the browser and Python to agree exactly. Two ways to get the browser tokenizer:
+The widget has to *compute* the numbers in the browser, not display constants. So I need the browser and Python to agree exactly. Two options were considered:
 
-- **Preferred: WASM.** Load the official `tokenizers` WASM build, `Tokenizer.from_file(tokenizer.json)` — same code as Python, so parity is free.
-- **Fallback: hand-rolled JS BPE** (~150 lines): UTF-8 → HF's visible-byte table, apply `add_prefix_space`, greedy-merge by `merges.txt` rank, map via `vocab.json`. Fully static-host friendly.
+- **Chosen: hand-rolled JS BPE** (`widget/bpe.js`, ~150 lines): UTF-8 → HF's visible-byte table, `add_prefix_space=True`, greedy-merge by `merges.txt` rank, map via `vocab.json`. Zero dependencies, trivial to host statically. **Verified to match Python `tokenizers` exactly** on mixed Hindi/Telugu/Bengali/English strings (`tests/test_parity.py`).
+- **Alternative: WASM.** Load the official `tokenizers` WASM build and `Tokenizer.from_file(tokenizer.json)` — identical to Python by construction, but heavier to bundle. Kept as a fallback if the hand-rolled path ever drifts.
 
-Non-negotiable gate before deploy — a parity test over all four corpora:
+Verification gate before deploy — the parity test over sample corpora (run via `uv run pytest`):
 
 ```
 for L in langs:
@@ -446,15 +447,15 @@ for L in langs:
     assert js_words(corpus[L])  == py_words(corpus[L])
 ```
 
-One token of mismatch on any language and the deploy is blocked. That's what lets me claim, honestly, that what the widget shows is what the grader's Python will produce. Same deal for `preprocess()` — JS and Python diffed on Indic fixtures (virama, matras, ZWJ/ZWNJ, khanda-ta — see Appendix B).
+One token of mismatch on any language means don't deploy until it's fixed. That's what lets me claim, honestly, that what the widget shows is what the grader's Python will produce. Same idea for `preprocess()` — the JS port (`widget/preprocess.js`) uses the identical regexes + `normalize("NFC")`.
 
-So three independent things compute the same numbers: the build's `manifest.json`, `score.py`, and the browser. CI asserts all three agree to 4 dp. That's the whole trust story.
+So three independent things compute the same numbers: the build's `manifest.json`, `score.py`, and the browser (`bpe.js`). Run `uv run pytest` to confirm they agree before deploying. That's the whole trust story.
 
 ```mermaid
 flowchart TD
     TOK[("tokenizer.json<br/>+ corpus/*.txt")] --> B["build → manifest.json.results"]
     TOK --> S["score.py (grader runs this)"]
-    TOK --> W["browser widget (WASM/JS)"]
+    TOK --> W["browser widget (bpe.js)"]
     B --> CMP{agree to 4 dp?}
     S --> CMP
     W --> CMP
@@ -472,12 +473,13 @@ Static SPA, vanilla JS is fine, no backend. On load it fetches the tokenizer + c
 2. **Per-language table** — lang · words · tokens · `X_i` (4 dp) · ≤1.2? · rank. Highlight the max and min rows and draw the spread bracket between them.
 3. **Calculation panel** — the literal arithmetic per language and the final `1000/(X_max−X_min)`, so nothing's a black box.
 4. **Interpretation toggle** — total-words (default) vs unique-words denominator, recomputes live; shows assumptions A1–A3.
-5. **Robustness row** — held-out-slice fertilities + their spread, labeled as an honesty check.
-6. **Token viewer** — searchable, virtualized table of all 10k tokens (id · token · decoded · lang tag), filter by script, search by substring. Load Indic fonts so tokens actually render.
-7. **Downloads** — buttons for every artifact + a "download all (zip)".
-8. **Provenance footer** — oldids, build time, lib versions, preprocess hash.
+5. **Token viewer** — searchable table of the 10k tokens (id · token · decoded), search by substring. Loads Indic fonts so tokens render.
+6. **Downloads** — buttons for `tokenizer.json`, `vocab.json`, `merges.txt`, `tokens.csv`, `manifest.json`.
+7. **Provenance footer** — oldids, vocab size, lib versions (from `manifest.json`).
 
-Perf: tokenize the four corpora once, cache in memory; virtualize the 10k-row table so it doesn't choke. Works offline after first load.
+_(Optional/future: a held-out robustness row per §8.5, once the build emits `held_out`.)_
+
+Perf: tokenize the four corpora once, cache in memory. Works offline after first load. Implemented in `widget/index.html` + `app.js` + `bpe.js` + `preprocess.js` + `styles.css`.
 
 Data flow: `load → preprocess_js(corpus) → tokens=encode_js(corpus).length, words=word_count_js(corpus) → X, sort, Δ, S → render`.
 
@@ -497,19 +499,18 @@ Submission = **Widget Link** (the site URL) + **Tokenizer.json** (the direct fil
 
 ---
 
-## 14. Tests (deploy is gated on these)
+## 14. Tests (`uv run pytest` — run before deploy)
 
-| test | checks |
+Implemented in `tests/`:
+
+| test file | checks |
 |---|---|
-| `preprocess_parity` | JS `preprocess`/`word_count` == Python on Indic fixtures |
-| `encode_parity` | JS/WASM token counts == Python, per corpus, exact |
-| `vocab_size` | tokenizer vocab == 10000 |
-| `no_unk` | encode→decode round-trips all four corpora, zero UNK |
-| `gate` | every `X_i ≤ 1.2` |
-| `score_matches_manifest` | `score.py` == `manifest.results` (4 dp) |
-| `downloads_exist` | every advertised download is present + non-empty |
+| `test_parity.py` | JS (`bpe.js`) token counts == Python `tokenizers`, exact. Self-contained (trains a tiny tokenizer). ✅ passing |
+| `test_vocab_size.py` | tokenizer vocab == 10000 |
+| `test_no_unk.py` | encode→decode round-trips all four corpora, zero UNK / no replacement chars |
+| `test_gate_and_manifest.py` | every `X_i ≤ 1.2`, and `score.py` numbers == `manifest.results` (4 dp) |
 
-Green CI → deploy. Red → fix first. This is what backs every claim in §11.
+Build-dependent tests skip cleanly (`run ./build.sh first`) until artifacts exist; the parity test runs anytime Node is present. Green suite → deploy; failures → fix first. This backs the trust claims in §11. (No hosted CI is wired up yet — run the suite locally; adding a GitHub Actions workflow is a straightforward future step.)
 
 ---
 
@@ -550,12 +551,12 @@ Green CI → deploy. Red → fix first. This is what backs every claim in §11.
 - [ ] vocab exactly 10,000 (asserted)
 - [ ] zero UNK on all four corpora
 - [ ] every `X_i ≤ 1.2` with margin
-- [ ] Δ minimized *and* reproducible (held-out reported)
+- [ ] Δ minimized *and* reproducible (held-out check optional, §8.5)
 - [ ] widget computes live, shows the arithmetic
 - [ ] full 10k-token list viewable + downloadable
 - [ ] public URL live
-- [ ] `python score.py` reproduces widget numbers to 4 dp
-- [ ] JS/Python parity green; deploy gated on CI
+- [ ] `uv run python src/score.py` reproduces widget numbers to 4 dp
+- [ ] `uv run pytest` green (parity, vocab_size, no_unk, gate, score-matches-manifest)
 - [ ] README covers interpretation (A1–A3), oldids, versions, re-run steps
 
 ---
@@ -575,15 +576,17 @@ Say I measure `X_en=1.02, X_hi=1.06, X_te=1.09, X_bn=1.05`. Gate ✓. min=1.02 (
 ## Appendix C — repo layout
 
 ```
-india-bpe/
-├── build.sh  pyproject.toml  uv.lock
-├── corpus/            en.txt hi.txt te.txt bn.txt  manifest.json   (shipped)
-├── src/               fetch_corpus.py preprocess.py curve_sweep.py
+india-bpe-tokenizer/
+├── readme.md  BPE_Tokenizer_Design_Spec.md  DEPLOYMENT.md
+├── build.sh  pyproject.toml  uv.lock  .python-version  netlify.toml  .gitignore
+├── corpus/            en.txt hi.txt te.txt bn.txt  manifest.json   (committed, pinned)
+├── src/               common.py preprocess.py fetch_corpus.py curve_sweep.py
 │                      train_balance.py build_union.py export_artifacts.py
 │                      score.py build_widget.py
 ├── widget/            index.html app.js bpe.js preprocess.js styles.css
-├── tests/             *_parity  vocab_size  no_unk  gate  score_matches_manifest
-└── dist/              deployed bundle (widget + tokenizer/ + corpus/)
+├── tests/             conftest.py _helpers.py test_parity.py test_vocab_size.py
+│                      test_no_unk.py test_gate_and_manifest.py
+└── dist/              generated bundle (widget + tokenizer/ + corpus/ + _headers)  [gitignored]
 ```
 
 ## Appendix D — glossary
