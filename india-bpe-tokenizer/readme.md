@@ -2,8 +2,8 @@
 
 A single **byte-level BPE tokenizer** with a **10,000-token vocabulary**, trained on the Wikipedia "India" article in **English, Hindi, Telugu, and Bengali**. Built for one goal: keep per-language token efficiency (*fertility*) not just low, but **equal across all four languages**.
 
-- **Live widget:** `<NETLIFY_URL>` — computes all ratios, token stats, and the self-score in your browser.
-- **Direct tokenizer download:** `<NETLIFY_URL>/tokenizer/tokenizer.json`
+- **Live widget:** `https://kayalindianbpe.netlify.app/` — computes all ratios, token stats, and the self-score in your browser.
+- **Direct tokenizer download:** `https://kayalindianbpe.netlify.app//tokenizer/tokenizer.json`
 - **Design doc:** [`BPE_Tokenizer_Design_Spec.md`](./BPE_Tokenizer_Design_Spec.md)
 - **Deployment guide:** [`DEPLOYMENT.md`](./DEPLOYMENT.md) — build → verify → deploy, with a step-by-step of every script.
 
