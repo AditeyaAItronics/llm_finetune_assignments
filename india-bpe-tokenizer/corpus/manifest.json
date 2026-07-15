@@ -1,0 +1,42 @@
+{
+  "built_at": "2026-07-09T14:18:05Z",
+  "extractor": "mediawiki action api prop=extracts explaintext=1",
+  "articles": {
+    "en": {
+      "host": "en.wikipedia.org",
+      "title": "India",
+      "oldid": 1362789340,
+      "revision_timestamp": "2026-07-06T05:24:36Z",
+      "sha256": "3af607673fe30470ff4b6e73b38cc855847f732bfb2c3347b1182a1a594080e3",
+      "chars": 65271,
+      "words": 10121
+    },
+    "hi": {
+      "host": "hi.wikipedia.org",
+      "title": "भारत",
+      "oldid": 6579409,
+      "revision_timestamp": "2026-07-06T14:04:22Z",
+      "sha256": "e9b3c74312c9576a0a4cd09052049eecbc8350054a3cf1b17c3ba8ee63ade392",
+      "chars": 43725,
+      "words": 8078
+    },
+    "te": {
+      "host": "te.wikipedia.org",
+      "title": "భారతదేశం",
+      "oldid": 4848340,
+      "revision_timestamp": "2026-05-29T11:32:49Z",
+      "sha256": "046738ccb897ad1069990f74ed18f30847da81cf160d13af1f43526d40f578cd",
+      "chars": 19977,
+      "words": 2511
+    },
+    "bn": {
+      "host": "bn.wikipedia.org",
+      "title": "ভারত",
+      "oldid": 9043433,
+      "revision_timestamp": "2026-07-09T11:02:43Z",
+      "sha256": "7f72f8fabfe99bd344e32a6ccdf4846a5ba83778e0d3738061959bddf50bade9",
+      "chars": 46395,
+      "words": 6388
+    }
+  }
+}

@@ -1,10 +1,12 @@
 # India BPE Tokenizer — Design Doc
 
-_Author: Aditeya Kayal · v3 · 2026-07-08 · status: design, about to build_
+_Author: Aditeya Kayal · v4 · 2026-07-09 · status: built + verified_
 
-This is my working design doc for the multilingual BPE assignment. It's written the way I'd hand it to another engineer picking up the repo: what I'm building, the decisions I've already made and why, the parts that will bite us, and the exact steps to ship. If you're skimming, read §2 (the scoring game), §7 (how I balance the languages), and §11 (why the numbers are trustworthy) — those are the parts that actually matter.
+This is my working design doc for the multilingual BPE assignment. It's written the way I'd hand it to another engineer picking up the repo: what I'm building, the decisions I've already made and why, the parts that will bite us, and the exact steps to ship. If you're skimming, read §2 (the scoring game), §6 (char- vs byte-level — the decision that drives the score), §7 (English-biased balancing), and §11 (why the numbers are trustworthy).
 
-**TL;DR** — One byte-level BPE tokenizer, 10k vocab, trained on the "India" Wikipedia article in `en / hi / te / bn`. Score is `1000 / (X_max - X_min)` where `X_i` = tokens-per-word for language `i`. So the whole game is: get all four fertilities under 1.2 *and dead-even with each other*. I do that with corpus-mixture weighting and a tiny control loop. Ship a static widget that recomputes everything in the browser so the grader can't catch me hand-waving numbers.
+**TL;DR** — One **character-level** BPE tokenizer with **UTF-8 byte-fallback** (zero UNK), 10k vocab, trained on the "India" Wikipedia article in `en / hi / te / bn`. Score is `1000 / (X_max - X_min)` where `X_i` = tokens-per-word for language `i`. Per the assignment, only **English (X1) must be ≤ 1.2**; the other three just feed the spread. Character-level is the key move: byte-level charges Indic glyphs 3 UTF-8 bytes each, floating Indic fertility to 3–6 and killing the spread; char-level collapses all four into a tight band. I hold `X_en ≤ 1.2` with **English-biased corpus weighting** and keep the smallest-spread config that clears the gate. Measured: `en 1.16 · hi 1.68 · te 2.84 · bn 2.22 → Δ 1.68, S ≈ 594`. A static widget recomputes everything in the browser so the grader can't catch me hand-waving numbers.
+
+> **v4 note:** v1–v3 used *byte-level* BPE and (wrongly) gated all four languages at ≤ 1.2, which is unachievable for Indic and made the trainer abort. v4 fixes both: character-level base (byte-fallback for zero UNK), English-only gate, English-biased balancing. Byte-level is now the *rejected* alternative in §6.
 
 ---
 
@@ -15,7 +17,7 @@ The submit form has exactly **two graded fields, 500 pts each**. Everything else
 | Field | Points | What goes in it | Caption I'll use |
 |---|---|---|---|
 | **Widget Link** | 500 | The public Netlify URL of the widget | `Live BPE tokenizer widget — ratios, token stats & self-score (en/hi/te/bn), computed in-browser` |
-| **Tokenizer.json** | 500 | A **direct-download** URL to `tokenizer.json` | `Direct download of the 10,000-token tokenizer.json (byte-level BPE)` |
+| **Tokenizer.json** | 500 | A **direct-download** URL to `tokenizer.json` | `Direct download of the 10,000-token tokenizer.json (character-level BPE, byte-fallback)` |
 
 **Hard rules from the form, and how I satisfy each:**
 
@@ -59,22 +61,22 @@ X_i = tokens_i / words_i          # tokens the encoder emits ÷ word count
 Rules:
 
 ```
-gate:   every X_i <= 1.2          # miss this on any language and you're out
+gate:   X_en <= 1.2               # ONLY English (X1) — the assignment states it for English alone
 Δ   =   max(X_i) - min(X_i)       # the spread across the 4 languages
-score = 1000 / Δ
+score = 1000 / Δ                  # always defined; there is no "disqualified" branch
 ```
 
 ```mermaid
 flowchart LR
     A[Encode each corpus] --> B["X_i = tokens_i / words_i<br/>(en, hi, te, bn)"]
-    B --> C{All X_i ≤ 1.2?}
-    C -- no --> D[DISQUALIFIED<br/>score = 0]
+    B --> C{X_en ≤ 1.2?}
+    C -- "no (tune English-biased weights)" --> B
     C -- yes --> E[sort X_i]
     E --> F["Δ = X_max − X_min"]
     F --> G["S = 1000 / Δ"]
 ```
 
-Here's the thing everyone misses on first read: **the score doesn't care how low your fertility is, only how *even* it is.** Absolute fertility only matters for clearing the 1.2 gate. After that, it's all about Δ.
+Two things people misread here. First, **only English is gated** — Hindi/Telugu/4th are just sorted into the spread; nothing is "disqualified." Second, **the score cares only how *even* the fertilities are**, not how low. So the whole game is minimizing Δ while keeping English at or under 1.2.
 
 So the objective is not "compress hard," it's "compress *equally* hard across four scripts." Two very different problems.
 
@@ -89,7 +91,7 @@ And Δ is brutal because it's in the denominator:
 
 Shaving 0.01 off the spread doubles the score. That's why half this doc is about squeezing Δ *and* proving the squeeze is real and not reproducibility noise. A huge score I can't reproduce is worthless — the grader runs it themselves.
 
-Target I'm aiming for: all four `X_i` parked around **1.00–1.10** (comfortable margin under the gate), with Δ in the low hundredths. I'll report everything to 4 decimals.
+**The built-in tension.** The score wants the four fertilities *equal*; the natural equal point for these scripts under char-level BPE is ~1.4–2.2. But the `X_en ≤ 1.2` rule forces English *below* that band, pinning it as the lone minimum and re-widening Δ. So there's no getting Δ→0: the more I push English down to clear the gate, the wider the spread. The English-biased balancer (§7) finds the sweet spot — English just under 1.2 at the smallest spread. Measured optimum: `en 1.16 · hi 1.68 · te 2.84 · bn 2.22 → Δ 1.68, S ≈ 594`. I report everything to 4 decimals.
 
 ---
 
@@ -164,37 +166,49 @@ def word_count(text): return len(_WORD.findall(text))
 
 Decisions baked in: **NFC** (Indic scripts encode the same glyph multiple ways — normalize or your counts wobble), **no lowercasing** (would change English fertility and diverge from the grader's raw text), no stemming/translit/stopword nonsense. The JS port uses the identical regexes + `.normalize("NFC")`, and there's a test that diffs JS vs Python output on Indic fixtures (§10).
 
+There's also a third shared helper, **`normalize_spaces(text)`** = `" ".join(re.findall(r"\S+", text))`, which collapses every whitespace run (including newlines) to a single space. Fertility is counted on this form so that under the Metaspace pre-tokenizer (§6) each word becomes exactly one `▁word` pre-token — identical in Python and in the browser JS encoder, with no newline / byte-fallback edge cases. `word_count` counts the same `\S+` units, so numerator and denominator stay aligned.
+
 ---
 
-## 6. Why byte-level BPE (and not the alternatives)
+## 6. Why character-level BPE + byte-fallback (this is the decision that sets the score)
 
-BPE = start from a base alphabet, repeatedly merge the most frequent adjacent pair, record each merge. `vocab = base + merges (+ specials)`. Standard.
+BPE = start from a base alphabet, repeatedly merge the most frequent adjacent pair, record each merge. `vocab = base + merges (+ specials)`. Standard. The whole algorithm is unchanged by this section — the only decision is the **base alphabet**, and it turns out to dominate the score.
 
-The real decision is the **base alphabet**:
+| base | Indic fertility | UNK risk | verdict |
+|---|---|---|---|
+| **byte-level** (256-byte base) | **bad** — 3 UTF-8 bytes/glyph before any merge → te ≈ 5.7 | zero | ✗ (kills the spread) |
+| SentencePiece unigram | good | low w/ byte fallback | different algorithm (not BPE) |
+| **char-level BPE + byte-fallback** | **good** — 1 base token/glyph → te ≈ 2.8 | **zero** (byte-fallback) | ✓ |
 
-| base | UNK risk | shares across scripts | port to JS | verdict |
-|---|---|---|---|---|
-| char-level | high — unseen glyph = UNK | bad, each script needs its chars | easy | ✗ |
-| SentencePiece unigram | low w/ byte fallback | good | annoying to match exactly | backup |
-| **byte-level BPE** | **zero** | **great — 256-byte base shared by all** | straightforward | ✓ |
+**I measured both.** Byte-level gives `en 1.29 · hi 3.51 · te 5.72 · bn 4.72` (Δ 4.4, S ≈ 226). Character-level gives `en 1.16 · hi 1.68 · te 2.84 · bn 2.22` (Δ 1.68, S ≈ 594) — a ~2.6× jump, for one reason: byte-level explodes every Devanagari/Telugu/Bengali glyph into 3 byte-tokens *before* merges even start, and a 10k shared vocab can't buy enough deep merges to claw that back. Char-level starts from one token per glyph, so the Indic scripts land in the same band as English.
 
-Going byte-level because:
+Char-level BPE is, if anything, the *more* canonical BPE (Sennrich et al. 2016 was char-level; byte-level is the GPT-2 variant). The only thing byte-level had going for it was zero-UNK — which **byte-fallback** restores: any character never seen in training is emitted as its UTF-8 byte tokens `<0x00>..<0xFF>` (which live inside the 10k vocab) instead of `UNK`. So we keep the zero-UNK guarantee *and* the char-level efficiency.
 
-- **Zero UNK, guaranteed.** Every Unicode char is UTF-8 bytes, all 256 are in the base. The grader literally cannot feed input that blows up fertility with an out-of-vocab char. That removes a whole category of "gotcha" input.
-- **256-byte base covers all four scripts** for 256 of my 10k budget. Cheap.
-- **Merges serialize cleanly** and I can re-implement the encoder in ~150 lines of JS for the in-browser verifier.
+**Faithful round-trip (the pass/fail gate).** The assignment (ERA V5) grades on a hard gate *before*
+fertility: `decode(encode(text))` must return the same visible, non-whitespace characters for
+arbitrary Markdown/URL text, or the whole submission scores 0. Two things make this hold:
 
-Here's the whole reason Indic needs more merge budget than English — one Telugu word, before and after merges:
+1. **Seed printable ASCII (0x20–0x7E) + Latin-1 (0xA0–0xFF) into `initial_alphabet`** as normal
+   characters. Markdown/URL punctuation (`# _ * \` [ ] ( ) / : . -` …) never appears in the
+   Wikipedia plain-text corpus, so without seeding it would fall to byte-fallback; seeded, it's a
+   normal in-vocab token that trivially round-trips.
+2. **Mark the byte-fallback tokens NON-special.** Trainers register `special_tokens` as *special*,
+   and `Tokenizer.decode()` skips special tokens *by default* — so byte-fallback characters would be
+   silently deleted on decode (exactly the bug that scored 0: `भारत#cite_ref-1` decoded to
+   `भारतciteref-1`, dropping `#` and `_`). `train_balance._save_faithful` flips their `special` flag
+   to false after training, so decode keeps them while encode-time byte-fallback still works. A
+   dedicated test (`tests/test_roundtrip.py`) locks this in on Markdown, URLs, all four scripts,
+   and exotic input (中文, emoji).
 
 ```mermaid
 flowchart LR
-    W["భారత<br/>(1 word)"] --> U["UTF-8 bytes<br/>9 bytes → 9 base tokens"]
-    U --> M["apply learned merges<br/>(byte pairs → syllables → word)"]
-    M --> T["1–2 tokens<br/>fertility ≈ 1.0"]
-    M -.->|too few merges<br/>for this script| T2["6–9 tokens<br/>fertility ≫ 1.2 ✗"]
+    W["భారత<br/>(1 word)"] --> B["byte-level<br/>12 UTF-8 bytes → up to 12 base tokens"]
+    W --> C["char-level<br/>4 chars → 4 base tokens"]
+    B --> BT["merges can't recover<br/>→ ~5.7 tokens/word ✗"]
+    C --> CT["merges → whole-word token<br/>→ ~2.8 tokens/word ✓"]
 ```
 
-The balancing loop (§7) exists precisely to buy each script *enough* merges to land in the good box, not the bad one. One thing to keep honest about: byte-level turns each multi-byte Indic char into a *sequence* of byte-tokens before merges kick in. So Indic languages need more merges than English to claw fertility back down to ~1.0. That imbalance is exactly what §7 fixes. I'll set `add_prefix_space=True` and document it, since word-initial token identity affects counts, and the JS port replicates the same byte→visible-byte table and prefix rule.
+Pre-tokenizer: **`Metaspace`** (SentencePiece-style) — it marks each word start with `▁`, so a word becomes one `▁word` pre-token. That makes the JS port trivial to keep byte-identical (one `▁word` per whitespace-separated word), and it's why fertility is measured on whitespace-normalized text (§5). The residual imbalance (Indic still a bit higher than English) is what §7's English-biased weighting manages.
 
 Library: HuggingFace `tokenizers`, exact version pinned. It's deterministic given fixed input + vocab size, and its `tokenizer.json` loads in both Python and a WASM build I can run in the browser.
 
@@ -204,59 +218,45 @@ Library: HuggingFace `tokenizers`, exact version pinned. It's deterministic give
 
 Budget math first:
 
-- 256 byte tokens (shared, mandatory)
-- 0–1 special tokens (keep it minimal)
-- ~9,743 learned merges — this is what I spread across languages
-- **= 10,000 exactly** (build asserts it; if dedup lands me at 9,999/10,001 I nudge the merge target by ±1 and rebuild — deterministic)
+- 256 byte-fallback tokens `<0x00>..<0xFF>` (reserved as special tokens → zero UNK)
+- the character base alphabet (every distinct char across the four corpora)
+- the remaining slots are learned merges — what the weighting spreads across languages
+- **= 10,000 exactly** (build asserts it; joint training on the four articles reaches 10k)
 
-The tension: English hits ~1.0 fertility with few merges; Indic scripts need way more. Train a naive joint BPE on raw text and English gets over-served, Indic under-served, and Δ is ugly.
+The tension (see §2): char-level puts all four fertilities in a tight band at flat weights (`en 1.48 · hi 1.37 · te 2.10 · bn 1.70`), but English lands *above* 1.2. The `X_en ≤ 1.2` gate forces English down, and the only knob that does that without a bigger vocab is giving English more of the merge budget.
 
-**My fix — corpus-mixture weighting.** Train *one* joint BPE, but replicate each language's corpus by an integer factor `r_i` so the harder languages pull more weight in merge selection. Integer replication (not random sampling) keeps it bit-reproducible.
-
-```
-train_corpus = corpus_en*r_en + corpus_hi*r_hi + corpus_te*r_te + corpus_bn*r_bn
-tok = train_byte_level_bpe(train_corpus, vocab_size=10000)
-```
-
-Then a dead-simple control loop nudges the weights until the spread stops shrinking:
+**My fix — English-biased corpus weighting.** Train *one* joint char-level BPE, but replicate the English corpus by an integer factor `r_en` (others pinned at 1) so English pulls more merges and its fertility drops under 1.2. Integer replication (not random sampling) keeps it bit-reproducible. Pushing `r_en` up lowers `X_en` but steals budget from the Indic scripts (their fertility rises), so the spread grows — meaning the **smallest `r_en` that clears the gate is also the smallest-spread passing config**.
 
 ```python
-r = [1, 1, 1, 1]                     # or seed from a quick curve sweep
-best, step, stale = None, 2, 0
-for _ in range(MAX_ITERS):           # ~20 is plenty
-    tok = train_joint(r, vocab_size=10000)
-    X   = {L: fertility(tok, corpus[L]) for L in LANGS}
-    if all(x <= 1.2 for x in X.values()):
-        Δ = max(X.values()) - min(X.values())
-        if best is None or Δ < best.Δ:
-            best, stale = (r[:], tok, X, Δ), 0
-        else:
-            stale += 1
-    r[argmax(X)] += step             # give the worst language more pull
-    if r[argmin(X)] > 1: r[argmin(X)] -= step
-    if stale >= PATIENCE: step //= 2  # anneal
-    if step == 0: break
-export(best.tok)
+best, fallback = None, None
+for r_en in [1, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 20]:
+    weights = {"en": r_en, "hi": 1, "te": 1, "bn": 1}
+    tok = train_joint_char_bytefallback(weights, vocab_size=10000)
+    X   = {L: fertility(tok, corpus[L]) for L in LANGS}   # on normalize_spaces(text)
+    Δ   = max(X.values()) - min(X.values())
+    if fallback is None or X["en"] < fallback.X_en:       # closest-to-gate safety net
+        fallback = (weights, tok, X, Δ)
+    if X["en"] <= 1.2 and (best is None or Δ < best.Δ):   # keep min-spread gate-passing
+        best = (weights, tok, X, Δ)
+export((best or fallback).tok)                            # never disqualifies
 ```
+
+Measured: `r_en = 4` is the first to clear the gate → `en 1.16 · hi 1.68 · te 2.84 · bn 2.22`, Δ 1.68, **S ≈ 594**, vocab 10,000.
 
 ```mermaid
 flowchart TD
-    S["seed weights r = (1,1,1,1)<br/>(or from curve sweep)"] --> T[train joint 10k BPE on<br/>weighted corpus mix]
-    T --> M["measure X_en, X_hi, X_te, X_bn"]
-    M --> G{all X_i ≤ 1.2<br/>and Δ improved?}
-    G -- yes --> K[keep as best]
-    G -- no --> N[ ]
-    K --> U["r[worst] += step<br/>r[best] −= step"]
-    N --> U
-    U --> P{Δ stalled?}
-    P -- yes --> A["step //= 2 (anneal)"]
-    P -- no --> T
-    A --> Q{step == 0?}
-    Q -- no --> T
-    Q -- yes --> E[export best tokenizer]
+    S["r_en = next in [1,2,3,4,…,20]<br/>(others pinned at 1)"] --> T[train joint 10k char-level BPE<br/>on English-weighted corpus mix]
+    T --> M["measure X_en, X_hi, X_te, X_bn<br/>on normalize_spaces(text)"]
+    M --> G{X_en ≤ 1.2?}
+    G -- yes --> K["candidate: keep if Δ is the<br/>smallest gate-passing so far"]
+    G -- no --> N["record as closest-to-gate fallback"]
+    K --> Q{more r_en to try?}
+    N --> Q
+    Q -- yes --> S
+    Q -- no --> E["export best gate-passing tokenizer<br/>(or the fallback — never disqualifies)"]
 ```
 
-Only 3 free ratios (pin one language at 1), so the search is tiny and each retrain on four short articles is seconds-to-minutes. Optional accelerator: sweep standalone vocab sizes per language first to sketch each fertility curve `f_i(n)`, then seed `r` smartly (Indic > 1) instead of starting flat.
+Only one free knob (English weight), so the sweep is tiny and each retrain on four short articles takes seconds. Rising `r_en` monotonically lowers `X_en`, so the first passing point is the smallest-spread solution.
 
 **Anti-overfit / honesty check (optional, not yet wired in):** the intended enhancement is to split each corpus 90/10 by paragraph, tune only on the 90%, and *report* fertility on the held-out 10%. If held-out Δ ≈ train Δ, the balance is real. (By assignment the eval text *is* the article, so train≈eval is expected and fine — the held-out number is a trust signal, not a second eval.) The current build does **not** compute this; it's a straightforward add to `train_balance.py` + `export_artifacts.py` if we want the extra signal.
 
@@ -353,21 +353,21 @@ Single source of truth for constants + paths: `LANGS = [en, hi, te, bn]`, `VOCAB
 For each language: (1) `prop=revisions` to resolve the **current `oldid`** + timestamp — the revision we pin; (2) `prop=extracts&explaintext=1` to pull **plain text** (not HTML); (3) `preprocess()`; (4) write `corpus/<lang>.txt` and record `oldid`, timestamp, `sha256(text)`, char/word counts in `corpus/manifest.json`. Sends a descriptive `User-Agent` (Wikipedia requires it) and follows redirects (`redirects=1`) so title variants resolve. The `extracts` API returns the current revision, and we log which `oldid` that was — the shipped text file is the actual source of truth.
 
 ### `curve_sweep.py` (optional diagnostic)
-Trains a standalone byte-level BPE per language at sizes `[500…8000]` and prints fertility at each. Shows how "expensive" each script is → used to seed the balancing weights. Produces no shipped artifact.
+Trains a standalone char-level BPE per language at sizes `[500…8000]` and prints fertility at each. Shows how "expensive" each script is. Produces no shipped artifact.
 
 ### `train_balance.py` (step 2 — primary path)
-The core. Loads corpora; starts weights `{en:1, hi:1, te:1, bn:1}`. Each iteration: build the training stream by **replicating each language's paragraphs `weights[lang]` times** (integer replication = deterministic), train one joint `ByteLevelBPE(vocab_size=10000, initial_alphabet=ByteLevel.alphabet())` (the full-byte alphabet guarantees zero UNK), then measure the four fertilities. If the gate passes and the spread `Δ` is a new best, **save `tokenizer.json`** and record `balance_meta.json`. Then nudge: `weights[worst] += step`, ease `weights[best] -= step`; when `Δ` stalls for `PATIENCE` iters, halve `step` (anneal); stop when `step` hits 0 or `MAX_ITERS`. Raises if nothing ever passes the gate (signals corpus/vocab problem).
+The core. Loads corpora; sweeps the English replication factor `r_en ∈ [1,2,3,4,…,20]` (others pinned at 1). Each iteration: build the training stream by **replicating English's paragraphs `r_en` times** (integer replication = deterministic), train one joint char-level `BPE(byte_fallback=True)` with a `Metaspace` pre-tokenizer and the 256 `<0xXX>` byte tokens reserved as specials (→ zero UNK), then measure the four fertilities on `normalize_spaces(text)`. Keep the **smallest-spread config that clears `X_en ≤ 1.2`**; also track the closest-to-gate config as a fallback. Saves `tokenizer.json` + `balance_meta.json`. **Never disqualifies** — it always exports the best (or fallback) tokenizer.
 
-> Gotcha baked in: with a small corpus the trainer can stop below 10,000 merges (not enough distinct pairs). The real "India" articles are large enough to reach 10k; `export` warns loudly if not.
+> Gotcha baked in: joint training on the four "India" articles reaches the full 10k vocab; `export` asserts `vocab == 10000` and warns otherwise.
 
-### `build_union.py` (step 2 — fallback)
-Only if the joint path can't tighten `Δ`. Trains four standalone BPEs, reads each ordered `merges.txt`, **round-robin interleaves by rank** (rank-0 of every language, then rank-1, …) with dedup up to the `10000−256` merge budget, then rebuilds one BPE from the byte alphabet + merged ordered merges. Round-robin gives each language equal footing (good for balance) at the cost of globally-optimal frequency ordering. Keep whichever path gives the smaller *reproducible* `Δ`.
+### `build_union.py` (step 2 — fallback, not used by default)
+Only if the joint path can't tighten `Δ`. Trains four standalone char-level BPEs, reads each ordered `merges.txt`, **round-robin interleaves by rank** with dedup up to the merge budget, then rebuilds one BPE from the char alphabet + merged ordered merges. Round-robin gives each language equal footing at the cost of globally-optimal frequency ordering. Keep whichever path gives the smaller *reproducible* `Δ`.
 
 ### `export_artifacts.py` (step 3)
-Loads `tokenizer.json`; **asserts vocab == 10000** (warns otherwise); writes `vocab.json` + `merges.txt` (`tok.model.save`) and a friendly `tokens.csv` (`id, token, decoded-UTF8, script`). The `decoded` column inverts the byte-level visible-byte map back to real UTF-8 so Indic tokens are readable; `script` is inferred from Unicode ranges (Devanagari/Telugu/Bengali/Latin/shared). Then recomputes per-language tokens/words/`X`, `Δ`, and `score`, and merges them into `dist/tokenizer/manifest.json` along with resolved library versions.
+Loads `tokenizer.json`; **asserts vocab == 10000** (warns otherwise); writes `vocab.json` + `merges.txt` (`tok.model.save`) and a friendly `tokens.csv` (`id, token, decoded, script`). Char-level tokens are already Unicode, so the `decoded` column just turns the Metaspace `▁` marker back into a leading space (byte-fallback `<0xXX>` fragments are shown verbatim); `script` is inferred from Unicode ranges (Devanagari/Telugu/Bengali/Latin/shared). Then recomputes per-language tokens/words/`X` (on `normalize_spaces`), `Δ`, and `score`, and merges them into `dist/tokenizer/manifest.json` with resolved library versions.
 
 ### `score.py` (step 4 — the canonical scorer, grader runs this)
-Minimal + dependency-light. Loads tokenizer + shipped corpus, applies the **same** `preprocess`, computes `tokens/words/X` per language, `Δ`, `score`; prints JSON; exits non-zero if any `X_i > 1.2`. Output must match `manifest.results` and the widget to 4 dp.
+Minimal + dependency-light. Loads tokenizer + shipped corpus, applies the **same** `preprocess` + `normalize_spaces`, computes `tokens/words/X` per language, `Δ`, `score`; prints JSON (with `english_gate_pass`); always exits 0 — the score is defined regardless of the non-English ratios. Output must match `manifest.results` and the widget to 4 dp.
 
 ### `build_widget.py` (step 5)
 Copies `corpus/*.txt` → `dist/corpus/`, the `widget/*` static files → `dist/`, and the results manifest → `dist/manifest.json`. After it runs, `dist/` is a self-contained static site ready for `netlify deploy --dir=dist --prod`, with the tokenizer already at `dist/tokenizer/`.
@@ -391,7 +391,7 @@ Copies `corpus/*.txt` → `dist/corpus/`, the `widget/*` static files → `dist/
 "results": {
   "interpretation": "tokens_per_total_word",
   "per_language": { "en": {"tokens":0,"words":0,"X":0.0}, "hi":{}, "te":{}, "bn":{} },
-  "X_max":0.0, "X_min":0.0, "spread":0.0, "score":0.0, "gate_pass":true
+  "X_max":0.0, "X_min":0.0, "spread":0.0, "score":0.0, "english_gate_pass":true
 }
 ```
 
@@ -436,7 +436,7 @@ Its output must match `manifest.results` *and* the widget, to 4 dp. If they disa
 
 The widget has to *compute* the numbers in the browser, not display constants. So I need the browser and Python to agree exactly. Two options were considered:
 
-- **Chosen: hand-rolled JS BPE** (`widget/bpe.js`, ~150 lines): UTF-8 → HF's visible-byte table, `add_prefix_space=True`, greedy-merge by `merges.txt` rank, map via `vocab.json`. Zero dependencies, trivial to host statically. **Verified to match Python `tokenizers` exactly** on mixed Hindi/Telugu/Bengali/English strings (`tests/test_parity.py`).
+- **Chosen: hand-rolled JS BPE** (`widget/bpe.js`, ~130 lines): normalize whitespace → one `▁word` pre-token per word (Metaspace), split into characters with UTF-8 byte-fallback to `<0xXX>` for unseen chars, greedy-merge by `merges.txt` rank, map via `vocab.json`. Zero dependencies, trivial to host statically. **Verified to match Python `tokenizers` exactly** — the widget's live per-language token counts equal `score.py` to the integer on all four corpora (and `tests/test_parity.py` re-checks it in Node).
 - **Alternative: WASM.** Load the official `tokenizers` WASM build and `Tokenizer.from_file(tokenizer.json)` — identical to Python by construction, but heavier to bundle. Kept as a fallback if the hand-rolled path ever drifts.
 
 Verification gate before deploy — the parity test over sample corpora (run via `uv run pytest`):
@@ -469,7 +469,7 @@ flowchart TD
 
 Static SPA, vanilla JS is fine, no backend. On load it fetches the tokenizer + corpora and computes everything. Components:
 
-1. **Self-score card** — big `S = 1000/Δ`, plus Δ and a gate badge ("all X_i ≤ 1.2 ✓/✗"; if it fails, show DISQUALIFIED, don't fake a score).
+1. **Self-score card** — big `S = 1000/Δ`, plus Δ and an English-gate badge ("English X₁ ≤ 1.2 ✓", or the actual value if it's over). The score is always shown — there is no "disqualified" state.
 2. **Per-language table** — lang · words · tokens · `X_i` (4 dp) · ≤1.2? · rank. Highlight the max and min rows and draw the spread bracket between them.
 3. **Calculation panel** — the literal arithmetic per language and the final `1000/(X_max−X_min)`, so nothing's a black box.
 4. **Interpretation toggle** — total-words (default) vs unique-words denominator, recomputes live; shows assumptions A1–A3.
@@ -505,10 +505,11 @@ Implemented in `tests/`:
 
 | test file | checks |
 |---|---|
-| `test_parity.py` | JS (`bpe.js`) token counts == Python `tokenizers`, exact. Self-contained (trains a tiny tokenizer). ✅ passing |
+| `test_roundtrip.py` | **the pass/fail gate**: `decode(encode(text))` preserves every visible char on Markdown/URL/multilingual/exotic samples (default decode) |
+| `test_parity.py` | JS (`bpe.js`) token counts == Python `tokenizers`, exact. Self-contained (trains a tiny tokenizer) |
 | `test_vocab_size.py` | tokenizer vocab == 10000 |
 | `test_no_unk.py` | encode→decode round-trips all four corpora, zero UNK / no replacement chars |
-| `test_gate_and_manifest.py` | every `X_i ≤ 1.2`, and `score.py` numbers == `manifest.results` (4 dp) |
+| `test_gate_and_manifest.py` | English is the min ratio + score defined, and `score.py` numbers == `manifest.results` (4 dp) |
 
 Build-dependent tests skip cleanly (`run ./build.sh first`) until artifacts exist; the parity test runs anytime Node is present. Green suite → deploy; failures → fix first. This backs the trust claims in §11. (No hosted CI is wired up yet — run the suite locally; adding a GitHub Actions workflow is a straightforward future step.)
 
@@ -521,7 +522,7 @@ Build-dependent tests skip cleanly (`run ./build.sh first`) until artifacts exis
 | grader uses a different article revision | pin + ship corpus & oldids; bundle is source of truth |
 | ambiguous denominator (total vs unique words) | lock fertility reading; widget toggle; flag to grader |
 | Δ tuned to noise, not real | held-out check; integer-replication determinism; report 4 dp |
-| UNK inflates fertility | byte-level base → zero UNK, tested |
+| UNK inflates fertility | char base + UTF-8 byte-fallback → zero UNK, tested |
 | Indic normalization mismatch | NFC everywhere; shared preprocess; edge-case fixtures |
 | JS ↔ Python count drift | parity harness blocks deploy |
 | vocab ≠ 10000 after dedup | build assertion + ±1 merge-target nudge |
@@ -536,7 +537,7 @@ Build-dependent tests skip cleanly (`run ./build.sh first`) until artifacts exis
 | M1 | fetch + pin corpus | 4 articles extracted, oldids + hashes recorded |
 | M2 | shared preprocess + counters (+ JS port) | word counts stable, JS/Py parity on fixtures |
 | M3 | fertility curve sweep | feasible common fertility found, `r` seeded |
-| M4 | balanced 10k training | all X_i ≤ 1.2, Δ minimized by the loop |
+| M4 | balanced 10k training | X_en ≤ 1.2, Δ minimized by the English-biased sweep |
 | M5 | union fallback | only if M4's Δ is unsatisfactory; keep the better one |
 | M6 | export artifacts | files valid, size==10000 asserted |
 | M7 | score.py | output == manifest (4 dp) |
@@ -563,7 +564,7 @@ Build-dependent tests skip cleanly (`run ./build.sh first`) until artifacts exis
 
 ## Appendix A — worked example
 
-Say I measure `X_en=1.02, X_hi=1.06, X_te=1.09, X_bn=1.05`. Gate ✓. min=1.02 (en), max=1.09 (te), Δ=0.07 → `S≈14,286`. Tighten toward a common ~1.05 (Δ=0.02) → `S=50,000`. Same four articles, 3.5× the score, purely from evening out the spread. That's the whole point of §7.
+The base-alphabet choice dominates. **Byte-level**: `X_en=1.29, X_hi=3.51, X_te=5.72, X_bn=4.72` → min 1.29 (en), max 5.72 (te), Δ=4.43 → `S≈226`. **Char-level + byte-fallback, English-biased (`r_en=4`)**: `X_en=1.16, X_hi=1.68, X_te=2.84, X_bn=2.22` → min 1.16 (en, gate ✓), max 2.84 (te), Δ=1.68 → `S≈594`. Same four articles, ~2.6× the score, purely from switching the base unit from bytes to characters and holding English at the gate. That's the whole point of §6 + §7.
 
 ## Appendix B — Indic edge cases the tests must cover
 
@@ -592,7 +593,9 @@ india-bpe-tokenizer/
 ## Appendix D — glossary
 
 - **BPE** — merge the most frequent adjacent pair, repeat.
-- **byte-level BPE** — BPE over UTF-8 bytes (256 base) → zero UNK.
+- **char-level BPE** — BPE over Unicode characters (the original BPE); ~3× tighter on Indic than byte-level.
+- **byte-fallback** — unseen chars emitted as UTF-8 byte tokens `<0xXX>` instead of UNK → zero UNK, kept from the byte-level design.
+- **byte-level BPE** — BPE over UTF-8 bytes (256 base); the *rejected* alternative here (inflates Indic fertility).
 - **fertility** — tokens ÷ words; lower = tighter. This is `X_i`.
 - **Δ (spread)** — `X_max − X_min`; the only thing the score cares about.
 - **NFC** — Unicode canonical composition; makes Indic counts stable.

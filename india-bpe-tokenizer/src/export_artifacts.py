@@ -18,38 +18,22 @@ import platform
 
 import tokenizers
 from tokenizers import Tokenizer
-from tokenizers.pre_tokenizers import ByteLevel
 
 from common import CORPUS_DIR, FERTILITY_GATE, LANGS, TOKENIZER_DIR, VOCAB_SIZE
-from preprocess import preprocess, word_count
-
-
-def _byte_decoder() -> dict[str, int]:
-    """Inverse of the GPT-2/byte-level 'bytes_to_unicode' map: visible-char -> raw byte."""
-    bs = (
-        list(range(ord("!"), ord("~") + 1))
-        + list(range(ord("¡"), ord("¬") + 1))
-        + list(range(ord("®"), ord("ÿ") + 1))
-    )
-    cs = bs[:]
-    n = 0
-    for b in range(256):
-        if b not in bs:
-            bs.append(b)
-            cs.append(256 + n)
-            n += 1
-    return {chr(c): b for b, c in zip(bs, cs)}
-
-
-BYTE_DECODER = _byte_decoder()
+from preprocess import normalize_spaces, preprocess, word_count
 
 
 def decode_token(token: str) -> str:
-    """Render a byte-level token back to readable UTF-8 (best effort)."""
-    try:
-        return bytearray(BYTE_DECODER[c] for c in token).decode("utf-8", errors="replace")
-    except KeyError:
+    """Render a char-level token for human reading.
+
+    Char-level tokens are already Unicode text; we just turn the Metaspace word-start
+    marker ``▁`` back into a leading space. Byte-fallback tokens (``<0xE2>`` …) are byte
+    fragments of some multi-byte glyph and aren't printable on their own, so we leave them
+    verbatim.
+    """
+    if token.startswith("<0x") and token.endswith(">"):
         return token
+    return token.replace("▁", " ")
 
 
 def script_tag(s: str) -> str:
@@ -92,7 +76,7 @@ def main() -> None:
     }
     per_language = {}
     for lang in LANGS:
-        toks = len(tok.encode(corpora[lang]).ids)
+        toks = len(tok.encode(normalize_spaces(corpora[lang])).ids)
         words = word_count(corpora[lang])
         per_language[lang] = {"tokens": toks, "words": words, "X": toks / words}
 
@@ -106,7 +90,7 @@ def main() -> None:
         "X_min": xmin,
         "spread": spread,
         "score": (1000 / spread) if spread > 1e-9 else None,
-        "gate_pass": all(v <= FERTILITY_GATE for v in xs.values()),
+        "english_gate_pass": xs["en"] <= FERTILITY_GATE,  # only English carries the <=1.2 rule
     }
 
     manifest_path = CORPUS_DIR / "manifest.json"

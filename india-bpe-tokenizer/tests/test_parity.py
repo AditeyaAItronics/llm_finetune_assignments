@@ -34,20 +34,25 @@ def test_js_python_parity():
 
     from tokenizers import Tokenizer
     from tokenizers.models import BPE
-    from tokenizers.pre_tokenizers import ByteLevel
+    from tokenizers.pre_tokenizers import Metaspace
     from tokenizers.trainers import BpeTrainer
 
-    tok = Tokenizer(BPE(unk_token=None))
-    tok.pre_tokenizer = ByteLevel(add_prefix_space=True)
-    trainer = BpeTrainer(vocab_size=800, initial_alphabet=ByteLevel.alphabet(),
-                         special_tokens=[], show_progress=False)
+    # Same recipe as src/train_balance.py: char-level BPE + byte-fallback + Metaspace.
+    tok = Tokenizer(BPE(unk_token=None, byte_fallback=True))
+    tok.pre_tokenizer = Metaspace()
+    trainer = BpeTrainer(vocab_size=800,
+                         special_tokens=[f"<0x{i:02X}>" for i in range(256)],
+                         show_progress=False)
     tok.train_from_iterator(iter(TRAIN), trainer=trainer)
 
     d = tempfile.mkdtemp()
     tok.model.save(d)
+    # Fertility is measured on whitespace-normalized text (one ▁word per word),
+    # which is exactly what bpe.js's countTokens does internally.
+    norm = [" ".join(s.split()) for s in SAMPLES]
     (open(f"{d}/samples.json", "w", encoding="utf-8")
      .write(json.dumps(SAMPLES, ensure_ascii=False)))
-    py_counts = [len(tok.encode(s).ids) for s in SAMPLES]
+    py_counts = [len(tok.encode(s).ids) for s in norm]
 
     bpe_js = H.ROOT / "widget" / "bpe.js"
     node = f"""

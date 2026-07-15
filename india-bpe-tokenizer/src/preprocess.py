@@ -36,3 +36,13 @@ def preprocess(text: str) -> str:
 def word_count(text: str) -> int:
     """Number of whitespace-delimited words. This is the denominator of X_i."""
     return len(_WORD.findall(text))
+
+
+def normalize_spaces(text: str) -> str:
+    """Collapse every run of whitespace (incl. newlines) to a single space.
+
+    Fertility is counted on THIS form so each word becomes exactly one
+    ``▁word`` pre-token under the Metaspace pre-tokenizer — identical in Python
+    and in the browser JS encoder, with no newline / byte-fallback edge cases.
+    """
+    return " ".join(_WORD.findall(text))

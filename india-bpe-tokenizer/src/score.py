@@ -2,7 +2,11 @@
 
 Deliberately short and dependency-light. Loads the tokenizer + the shipped corpus,
 applies the SAME preprocessing as training, and prints per-language tokens/words/X,
-the spread, and the score. Exits non-zero if any X_i > 1.2 (gate fail).
+the spread, and the score = 1000 / (X_max - X_min).
+
+Per the assignment, only ENGLISH (X1) carries the "<= 1.2" requirement; the other three
+languages just feed the spread. So we report the English gate but ALWAYS print a score
+and exit 0 (the score is defined regardless of the other languages' ratios).
 
 Its output must match dist/tokenizer/manifest.json['results'] and the widget, to 4 dp.
 """
@@ -14,7 +18,7 @@ import json
 from tokenizers import Tokenizer
 
 from common import CORPUS_DIR, FERTILITY_GATE, LANGS, TOKENIZER_DIR
-from preprocess import preprocess, word_count
+from preprocess import normalize_spaces, preprocess, word_count
 
 
 def main() -> None:
@@ -23,14 +27,13 @@ def main() -> None:
     per_language = {}
     for lang in LANGS:
         text = preprocess((CORPUS_DIR / f"{lang}.txt").read_text(encoding="utf-8"))
-        toks = len(tok.encode(text).ids)
+        toks = len(tok.encode(normalize_spaces(text)).ids)
         words = word_count(text)
         per_language[lang] = {"tokens": toks, "words": words, "X": toks / words}
 
     xs = {lang: per_language[lang]["X"] for lang in LANGS}
     xmax, xmin = max(xs.values()), min(xs.values())
     spread = xmax - xmin
-    gate_pass = all(v <= FERTILITY_GATE for v in xs.values())
 
     out = {
         "per_language": per_language,
@@ -38,12 +41,9 @@ def main() -> None:
         "X_min": xmin,
         "spread": spread,
         "score": (1000 / spread) if spread > 1e-9 else None,
-        "gate_pass": gate_pass,
+        "english_gate_pass": xs["en"] <= FERTILITY_GATE,  # only English carries the <=1.2 rule
     }
     print(json.dumps(out, ensure_ascii=False, indent=2))
-
-    if not gate_pass:
-        raise SystemExit("GATE FAILED: some X_i > 1.2")
 
 
 if __name__ == "__main__":

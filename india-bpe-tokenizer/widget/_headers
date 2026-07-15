@@ -1,0 +1,17 @@
+# Netlify headers. Lives in widget/ so build_widget copies it into dist/ (the publish root).
+# Guarantees UTF-8 for the Indic corpus/JSON and lets the tokenizer be fetched cross-origin.
+
+/tokenizer/*
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=3600
+
+/tokenizer/tokenizer.json
+  Content-Type: application/json; charset=utf-8
+  Access-Control-Allow-Origin: *
+
+/corpus/*
+  Content-Type: text/plain; charset=utf-8
+  Access-Control-Allow-Origin: *
+
+/manifest.json
+  Content-Type: application/json; charset=utf-8

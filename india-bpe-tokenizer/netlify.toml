@@ -1,0 +1,7 @@
+# Netlify deploy config for the India BPE Tokenizer widget.
+# Drag-and-drop the dist/ folder in the Netlify UI, or run:
+#     netlify deploy --dir=dist --prod
+# Per-file headers live in dist/_headers (copied from widget/_headers by the build).
+
+[build]
+  publish = "dist"

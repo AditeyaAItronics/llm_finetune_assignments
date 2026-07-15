@@ -6,7 +6,16 @@ the language set, the vocab budget, the fertility gate, and where files live.
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
+
+# Windows consoles default to cp1252, which cannot encode Devanagari/Telugu/Bengali.
+# Every script imports common, so force UTF-8 stdout/stderr here once, for all of them.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
+    except (AttributeError, ValueError):
+        pass
 
 # --- paths -----------------------------------------------------------------
 ROOT = Path(__file__).resolve().parent.parent

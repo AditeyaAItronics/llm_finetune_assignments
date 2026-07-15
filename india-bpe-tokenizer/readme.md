@@ -1,9 +1,11 @@
 # India BPE Tokenizer (en · hi · te · bn)
 
-A single **byte-level BPE tokenizer** with a **10,000-token vocabulary**, trained on the Wikipedia "India" article in **English, Hindi, Telugu, and Bengali**. Built for one goal: keep per-language token efficiency (*fertility*) not just low, but **equal across all four languages**.
+A single **character-level BPE tokenizer** (with UTF-8 **byte-fallback** for zero UNK) and a **10,000-token vocabulary**, trained on the Wikipedia "India" article in **English, Hindi, Telugu, and Bengali**. Built for one goal: keep per-language token efficiency (*fertility*) low and as **even across the four scripts** as the English ≤ 1.2 rule allows.
 
-- **Live widget:** `https://kayalindianbpe.netlify.app/` — computes all ratios, token stats, and the self-score in your browser.
-- **Direct tokenizer download:** `https://kayalindianbpe.netlify.app//tokenizer/tokenizer.json`
+> **Pass/fail gate first:** the tokenizer must **faithfully round-trip** — `decode(encode(text))` has to give back the same visible (non-whitespace) characters for arbitrary Markdown/URL text, or the submission scores 0 regardless of fertility. We guarantee this by seeding printable ASCII + Latin-1 as normal vocab characters and keeping the byte-fallback tokens **non-special** so `decode()` never drops them. See [`tests/test_roundtrip.py`](./tests/test_roundtrip.py).
+
+- **Live widget:** `<NETLIFY_URL>` — computes all ratios, token stats, and the self-score in your browser.
+- **Direct tokenizer download:** `<NETLIFY_URL>/tokenizer/tokenizer.json`
 - **Design doc:** [`BPE_Tokenizer_Design_Spec.md`](./BPE_Tokenizer_Design_Spec.md)
 - **Deployment guide:** [`DEPLOYMENT.md`](./DEPLOYMENT.md) — build → verify → deploy, with a step-by-step of every script.
 
@@ -12,7 +14,7 @@ A single **byte-level BPE tokenizer** with a **10,000-token vocabulary**, traine
 ### 👋 New here? Read in this order
 
 1. **This file (`readme.md`)** — what the project is, the scoring model, and how to build it. Start here and run it.
-2. **[`BPE_Tokenizer_Design_Spec.md`](./BPE_Tokenizer_Design_Spec.md)** — the *why*: the balancing algorithm, byte-level BPE reasoning, interpretation decisions, and per-script logic.
+2. **[`BPE_Tokenizer_Design_Spec.md`](./BPE_Tokenizer_Design_Spec.md)** — the *why*: char-level-vs-byte-level reasoning, the English-biased balancing, interpretation decisions, and per-script logic.
 3. **[`DEPLOYMENT.md`](./DEPLOYMENT.md)** — build → verify → deploy, with a step-by-step of every script (input / output / what it does) and the Netlify + submission steps.
 
 Short version: **read this → `./build.sh` → design doc to understand → deployment doc to ship.**
@@ -30,9 +32,9 @@ Short version: **read this → `./build.sh` → design doc to understand → dep
 
 - **Spread** `Δ = X_max − X_min = <DELTA>`
 - **Self-score** `S = 1000 / Δ = <SCORE>`
-- **Vocab size:** 10,000 (exact) · **UNK:** none (byte-level base)
+- **Vocab size:** 10,000 (exact) · **UNK:** none (char base + UTF-8 byte-fallback)
 
-*(Placeholders are filled in automatically by the build; see [Reproduce](#reproduce-the-numbers).)*
+*(Placeholders are filled in automatically by the build; see [Reproduce](#reproduce-the-numbers). Current measured build: en ≈ 1.16 · hi ≈ 1.68 · te ≈ 2.84 · bn ≈ 2.22 → Δ ≈ 1.68, S ≈ 594.)*
 
 ---
 
@@ -42,21 +44,32 @@ For each language `i`:
 
 ```
 X_i   = tokens_i / words_i            # fertility: tokens the encoder emits ÷ word count
-gate  : every X_i <= 1.2              # required for all four languages
+gate  : X_en <= 1.2                   # per the assignment, ONLY English (X1) carries this
 Δ     = max(X_i) - min(X_i)           # spread across the four languages
-score = 1000 / Δ
+score = 1000 / Δ                      # always defined; never "disqualified"
 ```
 
-The score depends **only on the spread Δ**, not on absolute fertility (as long as the ≤ 1.2 gate holds). So the design optimizes for *equal* fertility across scripts, not just low fertility. See the [design doc](./BPE_Tokenizer_Design_Spec.md) §2 and §7 for the full reasoning and the balancing algorithm.
+The assignment requires only **English (X1) ≤ 1.2**; Hindi, Telugu, and the fourth language
+are just measured, sorted, and fed into the spread. The score depends **only on the spread Δ**.
+See the [design doc](./BPE_Tokenizer_Design_Spec.md) §2 and §7 for the balancing algorithm.
+
+> **Why character-level (measured, not hand-waved):** byte-level BPE charges every Indic glyph
+> 3 UTF-8 bytes before any merge, so byte-level fertility floors around **en 1.29 · hi 3.51 ·
+> te 5.72 · bn 4.72** (Δ ≈ 4.4, S ≈ 226). **Character-level BPE removes that penalty**, collapsing
+> the four fertilities into one band and — with English-biased weighting to satisfy `X_en ≤ 1.2` —
+> giving **en 1.16 · hi 1.68 · te 2.84 · bn 2.22 → Δ ≈ 1.68, S ≈ 594** (a ~2.6× gain). Byte-fallback
+> keeps UNK at zero. Note the tension: the `X_en ≤ 1.2` rule forces English *below* the Indic
+> cluster, which re-widens the spread — the English-biased balancer holds English just under the
+> gate at the smallest spread. All numbers are computed live in the widget; nothing is faked.
 
 ---
 
 ## How it works (short version)
 
-1. **Byte-level BPE** (HuggingFace `tokenizers`) → zero `UNK` for any script, and a 256-byte base shared by all four languages.
-2. **Corpus-mixture weighting** — one joint tokenizer is trained, but each language's corpus is replicated by an integer factor so harder scripts (the Indic ones) get more influence. A small control loop nudges the weights to minimize the fertility spread Δ.
-3. **One shared preprocessing function** (NFC normalization + whitespace cleanup) is used identically by training, scoring, and the browser widget — so numerator and denominator always see the same text.
-4. **Three independent checks agree to 4 dp**: the build's `manifest.json`, `score.py`, and the widget's in-browser tokenizer (`bpe.js`, verified to match Python exactly). Confirm before deploying.
+1. **Character-level BPE + byte-fallback** (HuggingFace `tokenizers`, `Metaspace` pre-tokenizer) → a char base that tokenizes Indic scripts ~3× tighter than byte-level. Printable ASCII + Latin-1 are seeded as normal characters, and the byte-fallback tokens (`<0x00>..<0xFF>`, inside the 10k, kept **non-special**) guarantee zero `UNK` **and** a faithful `decode(encode(text))` round-trip.
+2. **English-biased corpus weighting** — one joint tokenizer; the English corpus is replicated more heavily so English gets enough merge budget to hold `X_en ≤ 1.2`, and we keep the smallest-spread config that still clears that gate.
+3. **One shared preprocessing + whitespace normalization** (NFC cleanup, then one `▁word` per word) used identically by training, scoring, and the browser widget — so numerator and denominator always see the same text.
+4. **Three independent checks agree to 4 dp**: the build's `manifest.json`, `score.py`, and the widget's in-browser tokenizer (`bpe.js`, verified to match Python exactly on all four corpora). Confirm before deploying.
 
 ---
 
