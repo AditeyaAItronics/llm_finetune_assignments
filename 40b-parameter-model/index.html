@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Building a 40B India-First Foundation Model</title>
+<meta name="description" content="Data and tokenizer strategy report for a 40B-parameter, Gemma-class, India-first foundation model.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%87%AE%F0%9F%87%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="masthead">
+  <div class="wrap">
+    <p class="eyebrow">Data &amp; Training Strategy — Session 3 Assignment</p>
+    <h1>Building a 40B, India‑First Foundation Model</h1>
+    <p class="dek">A data and tokenizer plan for a 40B-parameter model matched to Gemma‑class quality, biased toward code, agentic tasks, and the 22 scheduled Indian languages — every number traced to a real, shipped model.</p>
+    <div class="spec-chips">
+      <span class="chip">Params <b>40B</b></span>
+      <span class="chip">Pretrain tokens <b>15T</b></span>
+      <span class="chip">Vocab <b>256,000</b></span>
+      <span class="chip">Indic languages <b>22</b></span>
+      <span class="chip">Target fertility <b>≤2.1</b></span>
+    </div>
+  </div>
+</header>
+
+<section class="coverage">
+  <div class="wrap">
+    <p class="kicker">What the brief asked for → where it's answered</p>
+    <div class="coverage-grid">
+      <a class="coverage-item" href="#s3">
+        <span class="q">Data shape: what to collect, for pretrain / post-train / RL, and why</span>
+        <span class="a">S3 · S5 · S6</span>
+      </a>
+      <a class="coverage-item" href="#s4">
+        <span class="q">How the data gets cleaned for these objectives</span>
+        <span class="a">S4</span>
+      </a>
+      <a class="coverage-item" href="#s7">
+        <span class="q">How the model gets tested against the objective</span>
+        <span class="a">S7</span>
+      </a>
+      <a class="coverage-item" href="#s2">
+        <span class="q">Fertility per language + code/science/math/agentic → tokenizer vocab size</span>
+        <span class="a">S1 · S2</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<nav class="toc">
+  <div class="wrap">
+    <a href="#s1">S1 Compute budget</a>
+    <a href="#s2">S2 Tokenizer &amp; fertility</a>
+    <a href="#s3">S3 Pretraining mix</a>
+    <a href="#s4">S4 Cleaning</a>
+    <a href="#s5">S5 Post-training</a>
+    <a href="#s6">S6 RL / alignment</a>
+    <a href="#s7">S7 Evaluation</a>
+  </div>
+</nav>
+
+<main class="wrap">
+
+  <section id="s1">
+    <p class="s-label">S1 · Compute &amp; token budget</p>
+    <h2>Every recent open model overtrains past Chinchilla — the question is by how much</h2>
+    <p class="lead">Chinchilla-optimal is 20 tokens/param, tuned only for training FLOPs. Every shipped model ignores it because inference cost dominates lifetime spend. We set our budget by plotting where real models actually sit.</p>
+
+    <div class="chart-box">
+      <svg class="chinchilla" viewBox="0 0 680 300" width="100%" role="img" aria-label="Log-log scatter of parameter count vs tokens-per-parameter for six models">
+        <line class="grid-line" x1="70" y1="243" x2="630" y2="243"></line>
+        <line class="grid-line" x1="70" y1="158" x2="630" y2="158"></line>
+        <line class="grid-line" x1="70" y1="73"  x2="630" y2="73"></line>
+        <line class="grid-line" x1="200" y1="10" x2="200" y2="260"></line>
+        <line class="grid-line" x1="371" y1="10" x2="371" y2="260"></line>
+        <line class="grid-line" x1="500" y1="10" x2="500" y2="260"></line>
+        <line class="opt-line" x1="70" y1="243" x2="630" y2="243"></line>
+        <text x="440" y="238" font-size="11" fill="var(--accent-2)" text-anchor="end">20 tok/param — Chinchilla-optimal</text>
+        <line class="axis-line" x1="70" y1="260" x2="630" y2="260"></line>
+        <line class="axis-line" x1="70" y1="10" x2="70" y2="260"></line>
+        <text x="70" y="278" text-anchor="middle">5B</text>
+        <text x="200" y="278" text-anchor="middle">10B</text>
+        <text x="371" y="278" text-anchor="middle">25B</text>
+        <text x="500" y="278" text-anchor="middle">50B</text>
+        <text x="630" y="278" text-anchor="middle">100B</text>
+        <text x="60" y="263" text-anchor="end">10</text>
+        <text x="60" y="162" text-anchor="end">100</text>
+        <text x="60" y="77" text-anchor="end">500</text>
+        <text x="60" y="14" text-anchor="end">2000</text>
+
+        <circle cx="158" cy="13" r="5" fill="#8b8fa8"><title>LLaMA-3-8B: 15T / 8B = 1,875 tok/param (93.8x optimal)</title></circle>
+        <text class="pt-label" x="165" y="10">LLaMA-3-8B</text>
+        <circle cx="133" cy="103" r="5" fill="#8b8fa8"><title>LLaMA-2-7B: 2T / 7B = 286 tok/param (14.3x optimal)</title></circle>
+        <text class="pt-label" x="140" y="107">LLaMA-2-7B</text>
+        <circle cx="385" cy="75" r="5" fill="#c9975f"><title>Gemma-2-27B: 13T / 27B = 482 tok/param (24.1x optimal)</title></circle>
+        <text class="pt-label" x="392" y="79">Gemma-2-27B</text>
+        <circle cx="385" cy="60" r="5" fill="#e0973a"><title>Gemma-3-27B: 14T / 27B = 519 tok/param (25.9x optimal)</title></circle>
+        <text class="pt-label" x="392" y="56">Gemma-3-27B</text>
+        <circle cx="563" cy="118" r="5" fill="#8b8fa8"><title>LLaMA-3-70B: 15T / 70B = 214 tok/param (10.7x optimal) — same corpus as the 8B</title></circle>
+        <text class="pt-label" x="570" y="122">LLaMA-3-70B</text>
+        <circle cx="459" cy="89" r="7" fill="var(--accent)" stroke="var(--accent)"><title>Ours: 15T / 40B = 375 tok/param (18.75x optimal)</title></circle>
+        <text class="pt-label" x="467" y="86" font-weight="700" fill="var(--accent)">OURS — 40B</text>
+      </svg>
+    </div>
+
+    <p><b>15T tokens.</b> Two real precedents land almost exactly here: Gemma‑3‑27B (14T) and LLaMA‑3‑70B (15T, same corpus as its 8B sibling). At 40B params that's 375 tok/param — 18.75× optimal, deliberately between Gemma‑3‑27B's ratio and LLaMA‑3‑70B's, since a 40B model's deployment lifetime looks more like a 70B's than an 8B's.</p>
+    <div class="why"><b>Ceiling, not a floor:</b> pushing past ~500 tok/param only helps if the extra tokens are new information, not re-read epochs — which is exactly why §S3 leans on fresh Indic and code data rather than more web text.</div>
+
+    <div class="cite-strip">
+      <a class="cite" href="https://arxiv.org/pdf/2503.19786" target="_blank" rel="noopener">Gemma 3 — arXiv 2503.19786</a>
+      <a class="cite" href="https://arxiv.org/pdf/2408.00118" target="_blank" rel="noopener">Gemma 2 — arXiv 2408.00118</a>
+      <a class="cite" href="https://arxiv.org/html/2407.21783" target="_blank" rel="noopener">LLaMA 3 Herd — arXiv 2407.21783</a>
+      <a class="cite" href="https://arxiv.org/abs/2203.15556" target="_blank" rel="noopener">Chinchilla — arXiv 2203.15556</a>
+    </div>
+  </section>
+
+  <section id="s2">
+    <p class="s-label">S2 · Tokenizer &amp; fertility</p>
+    <h2>Fertility target, per language — then per domain</h2>
+    <p class="lead">Fertility = tokens per word. A tokenizer that spends 4 tokens on a Hindi word it spends 1.3 on in English gives Indic users less context and costlier inference — decided before a single pretraining token is chosen.</p>
+
+    <div class="bar-chart">
+      <div class="bar-row"><span class="lbl">English</span><div class="bar-track"><div class="bar-fill" style="width:38%;background:var(--fg-faint)" title="1.2 — baseline (GPT-4o, LLaMA-3, Gemma all land 1.2–1.3)"></div></div><span class="val">1.2</span></div>
+      <div class="bar-row"><span class="lbl">Devanagari cluster*</span><div class="bar-track"><div class="bar-fill" style="width:50%;background:var(--accent)" title="1.4–1.6 — matches Sarvam-1's measured low end"></div></div><span class="val">1.4–1.6</span></div>
+      <div class="bar-row"><span class="lbl">Bengali/Gujarati/Odia/Punjabi</span><div class="bar-track"><div class="bar-fill" style="width:58%;background:var(--accent)" title="1.5–1.8"></div></div><span class="val">1.5–1.8</span></div>
+      <div class="bar-row"><span class="lbl">Tamil/Telugu/Kannada/Malayalam</span><div class="bar-track"><div class="bar-fill" style="width:68%;background:var(--accent)" title="1.8–2.1 — agglutinative Dravidian morphology; matches Sarvam-1's measured ceiling, not overpromised"></div></div><span class="val">1.8–2.1</span></div>
+      <div class="bar-row"><span class="lbl">Urdu (Perso-Arabic)</span><div class="bar-track"><div class="bar-fill" style="width:60%;background:var(--accent)" title="1.7–1.9"></div></div><span class="val">1.7–1.9</span></div>
+      <div class="bar-row"><span class="lbl">Santhali/Manipuri/Kashmiri/Sindhi</span><div class="bar-track"><div class="bar-fill" style="width:88%;background:var(--danger)" title="2.2–2.8 — honest target given small available corpora"></div></div><span class="val">2.2–2.8</span></div>
+    </div>
+    <p style="font-size:13px;color:var(--fg-faint);max-width:none">*Hindi, Marathi, Nepali, Sanskrit, Konkani, Bodo, Maithili, Dogri share Devanagari's subword budget.</p>
+
+    <h3>Coding, science/math, agentic — not measured the same way</h3>
+    <p class="lead" style="margin-bottom:10px">These aren't "words," so tokens/word doesn't apply — each gets its own target metric.</p>
+    <div class="stat-grid">
+      <div class="stat-card">
+        <span class="stat-num">3.0–3.3</span>
+        <span class="stat-lbl">bytes / token — code</span>
+        <p>StarCoder2-class compression from the 32K code vocabulary — dense enough that long files still fit in context.</p>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num">1.0</span>
+        <span class="stat-lbl">token / digit — math &amp; science</span>
+        <p>Per-digit split like Gemma and Qwen (not LLaMA‑3's merged 3-digit tokens) — predictable digit boundaries help arithmetic; LaTeX operators and Greek letters get single dedicated tokens too.</p>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num">6</span>
+        <span class="stat-lbl">reserved tokens — agentic / tool-calling</span>
+        <p>Dedicated lifecycle tokens (open/close pairs for tool-def, tool-call, tool-result, + a string delimiter) — Gemma 4's real approach — so JSON structure isn't left to generic BPE merges.</p>
+      </div>
+    </div>
+
+    <h3>256,000-token vocabulary — allocation</h3>
+    <div class="stack">
+      <div style="width:16.4%;background:#8b8fa8" title="English / Latin — 42,000 (16.4%)"></div>
+      <div style="width:12.5%;background:var(--accent-2)" title="Code — 32,000 (12.5%)"></div>
+      <div style="width:43.0%;background:var(--accent)" title="22 Indic languages, ~11 scripts — 110,000 (43.0%)"></div>
+      <div style="width:21.5%;background:#c9975f" title="Other world languages — 55,000 (21.5%)"></div>
+      <div style="width:6.6%;background:var(--fg-faint)" title="Math/science notation, agentic tokens, reserved — 17,000 (6.6%)"></div>
+    </div>
+    <div class="stack-legend">
+      <span class="item"><span class="swatch" style="background:#8b8fa8"></span>English/Latin — 42K</span>
+      <span class="item"><span class="swatch" style="background:var(--accent-2)"></span>Code — 32K</span>
+      <span class="item"><span class="swatch" style="background:var(--accent)"></span>Indic scripts — 110K</span>
+      <span class="item"><span class="swatch" style="background:#c9975f"></span>Other languages — 55K</span>
+      <span class="item"><span class="swatch" style="background:var(--fg-faint)"></span>Math/agentic/reserved — 17K</span>
+    </div>
+    <p><b>256,000</b> total — matching Gemma‑2's proven size, not Gemma‑3's larger 262,144 (built for Gemini's ~140-language scope, wider than we need). The 110K Indic share exceeds Sarvam‑1's entire 68K vocabulary because we cover all 22 scheduled languages, including low-resource ones Sarvam doesn't attempt.</p>
+
+    <div class="cite-strip">
+      <a class="cite" href="https://www.sarvam.ai/blogs/sarvam-1" target="_blank" rel="noopener">Sarvam‑1 — 68,096 vocab, fertility 1.4–2.1</a>
+      <a class="cite" href="https://arxiv.org/html/2407.12481v2" target="_blank" rel="noopener">Krutrim LLM — arXiv 2407.12481</a>
+      <a class="cite" href="https://arxiv.org/pdf/2503.19786" target="_blank" rel="noopener">Gemma 3 tokenizer — 262,144 vocab</a>
+      <a class="cite" href="https://ai.google.dev/gemma/docs/capabilities/text/function-calling-gemma4" target="_blank" rel="noopener">Gemma 4 — 6 tool-use special tokens</a>
+    </div>
+  </section>
+
+  <section id="s3">
+    <p class="s-label">S3 · Pretraining data mix</p>
+    <h2>Start from LLaMA‑3's disclosed mix, re-weight for the brief</h2>
+    <p class="lead">LLaMA‑3 published its actual mix: 50% general, 25% math, 17% code, 8% multilingual. That 8% is right for an English-first model and wrong for ours.</p>
+
+    <div class="stack">
+      <div style="width:38%;background:#8b8fa8" title="General web — 38% · 5.70T"></div>
+      <div style="width:20%;background:var(--accent-2)" title="Code — 20% · 3.00T"></div>
+      <div style="width:12%;background:#c9975f" title="Math/reasoning — 12% · 1.80T"></div>
+      <div style="width:20%;background:var(--accent)" title="Indic, native — 20% · 3.00T"></div>
+      <div style="width:5%;background:#6c6fa0" title="Agentic/synthetic — 5% · 0.75T"></div>
+      <div style="width:5%;background:var(--fg-faint)" title="Other world languages — 5% · 0.75T"></div>
+    </div>
+    <div class="stack-legend">
+      <span class="item"><span class="swatch" style="background:#8b8fa8"></span>General web — 38%</span>
+      <span class="item"><span class="swatch" style="background:var(--accent-2)"></span>Code — 20%</span>
+      <span class="item"><span class="swatch" style="background:#c9975f"></span>Math/reasoning — 12%</span>
+      <span class="item"><span class="swatch" style="background:var(--accent)"></span>Indic (native) — 20%</span>
+      <span class="item"><span class="swatch" style="background:#6c6fa0"></span>Agentic/synthetic — 5%</span>
+      <span class="item"><span class="swatch" style="background:var(--fg-faint)"></span>Other languages — 5%</span>
+    </div>
+
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Slice</th><th class="num">Tokens</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td>General web</td><td class="num">5.70T</td><td>Cut from LLaMA‑3's 50% to fund Indic + code.</td></tr>
+          <tr><td>Code</td><td class="num">3.00T</td><td>Up from LLaMA‑3's 17%; short of Qwen2.5‑Coder's 70% — this stays a general model.</td></tr>
+          <tr><td>Math/reasoning</td><td class="num">1.80T</td><td>Below LLaMA‑3's 25% — still transfers to code/agentic, tuned less aggressively.</td></tr>
+          <tr><td>Indic (native)</td><td class="num">3.00T</td><td>2.5× LLaMA‑3's whole multilingual share — alone 1.5× Sarvam‑1's <em>entire</em> Indic corpus (2T).</td></tr>
+          <tr><td>Agentic/synthetic</td><td class="num">0.75T</td><td>Natural agentic traces barely exist; mostly bootstrapped tool-use trajectories.</td></tr>
+          <tr><td>Other languages</td><td class="num">0.75T</td><td>Keeps the model globally usable.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="why"><b>Why 20% and not higher:</b> native-quality Indic text is scarcer than English/code — past ~20% the quota gets filled with low-quality scrapes or heavy back-translation, hurting fluency more than the volume helps.</div>
+
+    <div class="cite-strip">
+      <a class="cite" href="https://arxiv.org/html/2407.21783" target="_blank" rel="noopener">LLaMA 3 — data mix, §3.1</a>
+      <a class="cite" href="https://arxiv.org/pdf/2412.15115" target="_blank" rel="noopener">Qwen2.5 Technical Report</a>
+      <a class="cite" href="https://www.sarvam.ai/blogs/sarvam-1" target="_blank" rel="noopener">Sarvam‑1 — 2T Indic corpus</a>
+    </div>
+  </section>
+
+  <section id="s4">
+    <p class="s-label">S4 · Data cleaning</p>
+    <h2>Filters tuned for English quietly break on Indic text</h2>
+    <p class="lead">Reused English quality/toxicity/LID tooling doesn't just underperform on Indic languages — it can strip legitimate religious, caste, or regional-political content that gets misread as toxic.</p>
+
+    <div class="clean-grid">
+      <div class="clean-card"><span class="tag">01 · Dedup</span><b>Per-language MinHash/LSH</b><span>English-tuned thresholds over- or under-merge on Indic scripts.</span></div>
+      <div class="clean-card"><span class="tag">02 · Quality</span><b>Classifiers retrained, not ported</b><span>A translated English quality classifier imports English notions of "good prose."</span></div>
+      <div class="clean-card"><span class="tag">03 · Language ID</span><b>Custom LID for code-mixing</b><span>Standard LID misreads Hinglish/Tanglish — extremely common in real Indian user input.</span></div>
+      <div class="clean-card"><span class="tag">04 · Code</span><b>Repo-level, execution-aware</b><span>License-aware filtering, repo-level dedup, AST validity, lint/execution checks.</span></div>
+      <div class="clean-card"><span class="tag">05 · PII</span><b>India-specific patterns</b><span>Standard PII rules plus Aadhaar-like and PAN identifier formats.</span></div>
+      <div class="clean-card"><span class="tag">06 · Toxicity</span><b>Thresholds set with native annotators</b><span>Ported English safety classifiers over-censor legitimate Indic discourse.</span></div>
+    </div>
+  </section>
+
+  <section id="s5">
+    <p class="s-label">S5 · Post-training (SFT)</p>
+    <h2>Instructions have to be authored in-language, not translated into it</h2>
+    <p class="lead">Machine-translated instructions carry English framing into grammatically-correct Hindi or Tamil — quietly defeating "India first" while looking fine on the page.</p>
+
+    <div class="bar-chart">
+      <div class="bar-row"><span class="lbl">Coding / agentic tool-use</span><div class="bar-track"><div class="bar-fill" style="width:70%;background:var(--accent-2)" title="35% of SFT data"></div></div><span class="val">35%</span></div>
+      <div class="bar-row"><span class="lbl">General instruction-following</span><div class="bar-track"><div class="bar-fill" style="width:60%;background:#8b8fa8" title="30% of SFT data"></div></div><span class="val">30%</span></div>
+      <div class="bar-row"><span class="lbl">Indic-native (authored, not MT'd)</span><div class="bar-track"><div class="bar-fill" style="width:50%;background:var(--accent)" title="25% of SFT data"></div></div><span class="val">25%</span></div>
+      <div class="bar-row"><span class="lbl">India-context reasoning</span><div class="bar-track"><div class="bar-fill" style="width:20%;background:#c9975f" title="10% — law, civics, regional knowledge"></div></div><span class="val">10%</span></div>
+    </div>
+    <p style="font-size:13.5px;color:var(--fg-faint);max-width:none">India-context reasoning (civics, law, regional knowledge) is the smallest share and the most responsible for the model's <em>default</em> frame of reference.</p>
+  </section>
+
+  <section id="s6">
+    <p class="s-label">S6 · RL / alignment</p>
+    <h2>Verifiable rewards move capability; native annotators move worldview</h2>
+    <p class="lead">Only the second lever is where "India first" actually gets encoded — not the pretraining token count.</p>
+
+    <div class="rl-grid">
+      <div class="rl-card"><span class="tag">RLVR</span><b>Code &amp; math</b><span>Execution/unit-test pass rate as reward — language-agnostic, cheap to scale, the DeepSeek/Qwen-class recipe.</span></div>
+      <div class="rl-card"><span class="tag">Agentic RL</span><b>Multi-step tool use</b><span>Outcome-based (task-completion) reward over multi-step tool-use environments, not step-level supervision.</span></div>
+      <div class="rl-card"><span class="tag">RLHF / RLAIF</span><b>India-based annotators</b><span>Preference data from Indian annotator pools — a US/Euro-centric "constitution" encodes that framing regardless of pretraining data.</span></div>
+    </div>
+  </section>
+
+  <section id="s7">
+    <p class="s-label">S7 · Evaluation</p>
+    <h2>Three tiers — can it compete, does it work in Indic languages, does it default Indian</h2>
+    <p class="lead">Each tier catches a failure the others miss.</p>
+
+    <div class="tier-row">
+      <div class="tier-col">
+        <span class="n">Tier 1</span><b>Standard</b>
+        <div class="tier-chips"><span>MMLU</span><span>GSM8K/MATH</span><span>HumanEval</span><span>SWE-bench</span><span>BFCL</span></div>
+        <p>Table-stakes parity with Gemma-4-class general/coding/agentic ability.</p>
+      </div>
+      <div class="tier-col">
+        <span class="n">Tier 2</span><b>Indic-specific</b>
+        <div class="tier-chips"><span>IndicXTREME</span><span>IndicGLUE</span><span>MILU</span><span>FLORES</span></div>
+        <p>Native-language reasoning, not translate-test — translation hides real gaps.</p>
+      </div>
+      <div class="tier-col">
+        <span class="n">Tier 3</span><b>Custom / worldview</b>
+        <div class="tier-chips"><span>Fertility audit</span><span>Default-framing rubric</span></div>
+        <p>Scores the model's <em>unprompted</em> defaults (currency, dates, law), not just what it knows when asked.</p>
+      </div>
+    </div>
+    <p>Safety red-teaming runs separately across religious, caste, regional, and linguistic axes with Indian annotators — Western safety sets don't cover these.</p>
+
+    <details>
+      <summary>Open questions we're not pretending are settled</summary>
+      <p>3T-token native Indic web availability is unverified — this assumes synthetic augmentation (backtranslation + native fluency filtering) closes the gap, which is itself unproven at this volume.</p>
+      <p>The 375 tok/param target assumes genuinely new tokens, not repeated epochs — if Indic scarcity forces epoching, the real ratio is worse than the headline number.</p>
+    </details>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <h3>References</h3>
+    <ul class="refs">
+      <li><a href="https://arxiv.org/pdf/2503.19786" target="_blank" rel="noopener">Gemma Team, "Gemma 3 Technical Report," arXiv:2503.19786</a></li>
+      <li><a href="https://arxiv.org/pdf/2408.00118" target="_blank" rel="noopener">Gemma Team, "Gemma 2," arXiv:2408.00118</a></li>
+      <li><a href="https://arxiv.org/html/2407.21783" target="_blank" rel="noopener">Meta AI, "The Llama 3 Herd of Models," arXiv:2407.21783</a></li>
+      <li><a href="https://arxiv.org/pdf/2412.15115" target="_blank" rel="noopener">Qwen Team, "Qwen2.5 Technical Report," arXiv:2412.15115</a></li>
+      <li><a href="https://arxiv.org/pdf/2409.12186" target="_blank" rel="noopener">Qwen Team, "Qwen2.5-Coder Technical Report," arXiv:2409.12186</a></li>
+      <li><a href="https://arxiv.org/abs/2203.15556" target="_blank" rel="noopener">Hoffmann et al., "Chinchilla," arXiv:2203.15556</a></li>
+      <li><a href="https://www.sarvam.ai/blogs/sarvam-1" target="_blank" rel="noopener">Sarvam AI, "Sarvam‑1: The First Indian Language LLM"</a></li>
+      <li><a href="https://arxiv.org/html/2407.12481v2" target="_blank" rel="noopener">Ola Krutrim, "Krutrim LLM," arXiv:2407.12481</a></li>
+      <li><a href="https://arxiv.org/html/2511.03237v1" target="_blank" rel="noopener">"IndicSuperTokenizer," arXiv:2511.03237</a></li>
+      <li><a href="https://arxiv.org/pdf/2404.16816" target="_blank" rel="noopener">"IndicGenBench," arXiv:2404.16816</a></li>
+      <li><a href="https://ai.google.dev/gemma/docs/capabilities/text/function-calling-gemma4" target="_blank" rel="noopener">Google AI, "Function calling with Gemma 4"</a></li>
+    </ul>
+    <div class="colophon">Session 3 assignment — data &amp; training strategy for a 40B parameter, India-first foundation model. Figures are planning estimates grounded in the cited technical reports, not measurements from an actual training run. Full reasoning trail in <a href="./design.md">design.md</a>.</div>
+  </div>
+</footer>
+</body>
+</html>
