@@ -1,0 +1,9 @@
+[project]
+name = "session4-data-cleaning-pipeline"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "datasketch>=2.0.0",
+    "langdetect>=1.0.9",
+    "requests>=2.34.2",
+]

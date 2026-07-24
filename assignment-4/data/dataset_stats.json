@@ -1,0 +1,699 @@
+{
+  "size": {
+    "dataset": {
+      "dataset": "ai4bharat/sangraha",
+      "num_bytes_original_files": null,
+      "num_bytes_parquet_files": 463080535543,
+      "num_bytes_memory": 1018076939670,
+      "num_rows": 177355164,
+      "estimated_num_rows": 268356447
+    },
+    "configs": [
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "synthetic",
+        "num_bytes_original_files": 408149462763,
+        "num_bytes_parquet_files": 408149462763,
+        "num_bytes_memory": 881428322851,
+        "num_rows": 153471772,
+        "num_columns": 2,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "unverified",
+        "num_bytes_original_files": null,
+        "num_bytes_parquet_files": 21049858500,
+        "num_bytes_memory": 54230354708,
+        "num_rows": 8782730,
+        "num_columns": 2,
+        "estimated_num_rows": 27941905
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "verified",
+        "num_bytes_original_files": null,
+        "num_bytes_parquet_files": 33881214280,
+        "num_bytes_memory": 82418262111,
+        "num_rows": 15100662,
+        "num_columns": 3,
+        "estimated_num_rows": 86942770
+      }
+    ],
+    "splits": [
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "synthetic",
+        "split": "asm_Beng",
+        "num_bytes_parquet_files": 17959727260,
+        "num_bytes_memory": 42322956460,
+        "num_rows": 5626480,
+        "num_columns": 2,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "synthetic",
+        "split": "asm_Latn",
+        "num_bytes_parquet_files": 11780380483,
+        "num_bytes_memory": 18373551764,
+        "num_rows": 5626480,
+        "num_columns": 2,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "synthetic",
+        "split": "ben_Beng",
+        "num_bytes_parquet_files": 17466833479,
+        "num_bytes_memory": 50088624479,
+        "num_rows": 5518760,
+        "num_columns": 2,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "synthetic",
+        "split": "ben_Latn",
+        "num_bytes_parquet_files": 11671504647,
+        "num_bytes_memory": 21274532824,
+        "num_rows": 5518760,
+        "num_columns": 2,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "synthetic",
+        "split": "guj_Gujr",
+        "num_bytes_parquet_files": 17305385314,
+        "num_bytes_memory": 39306937725,
+        "num_rows": 5603976,
+        "num_columns": 2,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "synthetic",
+        "split": "guj_Latn",
+        "num_bytes_parquet_files": 12036525827,
+        "num_bytes_memory": 18148890970,
+        "num_rows": 5603976,
+        "num_columns": 2,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "synthetic",
+        "split": "hin_Deva",
+        "num_bytes_parquet_files": 17186353232,
+        "num_bytes_memory": 41513137018,
+        "num_rows": 5775143,
+        "num_columns": 2,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "synthetic",
+        "split": "hin_Latn",
+        "num_bytes_parquet_files": 12065920624,
+        "num_bytes_memory": 19804276304,
+        "num_rows": 5775143,
+        "num_columns": 2,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "synthetic",
+        "split": "kan_Knda",
+        "num_bytes_parquet_files": 18526350503,
+        "num_bytes_memory": 46997474260,
+        "num_rows": 5618004,
+        "num_columns": 2,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "synthetic",
+        "split": "kan_Latn",
+        "num_bytes_parquet_files": 12122149869,
+        "num_bytes_memory": 20025768518,
+        "num_rows": 5618004,
+        "num_columns": 2,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "synthetic",
+        "split": "mal_Mlym",
+        "num_bytes_parquet_files": 15144154272,
+        "num_bytes_memory": 38842938194,
+        "num_rows": 4348597,
+        "num_columns": 2,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "synthetic",
+        "split": "mal_Latn",
+        "num_bytes_parquet_files": 9722904397,
+        "num_bytes_memory": 15731227939,
+        "num_rows": 4348597,
+        "num_columns": 2,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "synthetic",
+        "split": "mar_Deva",
+        "num_bytes_parquet_files": 17743824635,
+        "num_bytes_memory": 45278679128,
+        "num_rows": 5748175,
+        "num_columns": 2,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "synthetic",
+        "split": "mar_Latn",
+        "num_bytes_parquet_files": 11891094788,
+        "num_bytes_memory": 19649480945,
+        "num_rows": 5748175,
+        "num_columns": 2,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "synthetic",
+        "split": "npi_Deva",
+        "num_bytes_parquet_files": 15696455393,
+        "num_bytes_memory": 37284767064,
+        "num_rows": 4880414,
+        "num_columns": 2,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "synthetic",
+        "split": "npi_Latn",
+        "num_bytes_parquet_files": 10430029719,
+        "num_bytes_memory": 16050598194,
+        "num_rows": 4880414,
+        "num_columns": 2,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "synthetic",
+        "split": "ory_Orya",
+        "num_bytes_parquet_files": 18132716387,
+        "num_bytes_memory": 46145940249,
+        "num_rows": 5712838,
+        "num_columns": 2,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "synthetic",
+        "split": "ory_Latn",
+        "num_bytes_parquet_files": 11817295604,
+        "num_bytes_memory": 19899191547,
+        "num_rows": 5712838,
+        "num_columns": 2,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "synthetic",
+        "split": "pan_Guru",
+        "num_bytes_parquet_files": 17372876945,
+        "num_bytes_memory": 43882492581,
+        "num_rows": 5824922,
+        "num_columns": 2,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "synthetic",
+        "split": "pan_Latn",
+        "num_bytes_parquet_files": 12033001873,
+        "num_bytes_memory": 20926539053,
+        "num_rows": 5824922,
+        "num_columns": 2,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "synthetic",
+        "split": "san_Deva",
+        "num_bytes_parquet_files": 18950169408,
+        "num_bytes_memory": 54249282398,
+        "num_rows": 5792466,
+        "num_columns": 2,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "synthetic",
+        "split": "san_Latn",
+        "num_bytes_parquet_files": 12563524217,
+        "num_bytes_memory": 23407326143,
+        "num_rows": 5792466,
+        "num_columns": 2,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "synthetic",
+        "split": "tam_Taml",
+        "num_bytes_parquet_files": 19269874475,
+        "num_bytes_memory": 54494001429,
+        "num_rows": 5533119,
+        "num_columns": 2,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "synthetic",
+        "split": "tam_Latn",
+        "num_bytes_parquet_files": 12626801171,
+        "num_bytes_memory": 22632243907,
+        "num_rows": 5533119,
+        "num_columns": 2,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "synthetic",
+        "split": "tel_Telu",
+        "num_bytes_parquet_files": 18122482887,
+        "num_bytes_memory": 40808135682,
+        "num_rows": 5434234,
+        "num_columns": 2,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "synthetic",
+        "split": "tel_Latn",
+        "num_bytes_parquet_files": 11994591067,
+        "num_bytes_memory": 17601945835,
+        "num_rows": 5434234,
+        "num_columns": 2,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "synthetic",
+        "split": "urd_Arab",
+        "num_bytes_parquet_files": 14502186287,
+        "num_bytes_memory": 27222206576,
+        "num_rows": 5318758,
+        "num_columns": 2,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "synthetic",
+        "split": "urd_Latn",
+        "num_bytes_parquet_files": 12014348000,
+        "num_bytes_memory": 19465175665,
+        "num_rows": 5318758,
+        "num_columns": 2,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "unverified",
+        "split": "asm",
+        "num_bytes_parquet_files": 55030937,
+        "num_bytes_memory": 143288599,
+        "num_rows": 18713,
+        "num_columns": 2,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "unverified",
+        "split": "ben",
+        "num_bytes_parquet_files": 2272373757,
+        "num_bytes_memory": 5946503174,
+        "num_rows": 1043220,
+        "num_columns": 2,
+        "estimated_num_rows": 5373006
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "unverified",
+        "split": "guj",
+        "num_bytes_parquet_files": 1435000311,
+        "num_bytes_memory": 3655161778,
+        "num_rows": 586977,
+        "num_columns": 2,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "unverified",
+        "split": "hin",
+        "num_bytes_parquet_files": 2274820822,
+        "num_bytes_memory": 5996260821,
+        "num_rows": 898779,
+        "num_columns": 2,
+        "estimated_num_rows": 14480588
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "unverified",
+        "split": "kan",
+        "num_bytes_parquet_files": 1466177764,
+        "num_bytes_memory": 3840074886,
+        "num_rows": 625575,
+        "num_columns": 2,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "unverified",
+        "split": "mal",
+        "num_bytes_parquet_files": 2132204665,
+        "num_bytes_memory": 5777137394,
+        "num_rows": 1026750,
+        "num_columns": 2,
+        "estimated_num_rows": 1026585
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "unverified",
+        "split": "mar",
+        "num_bytes_parquet_files": 2160369034,
+        "num_bytes_memory": 5715489366,
+        "num_rows": 902332,
+        "num_columns": 2,
+        "estimated_num_rows": 902188
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "unverified",
+        "split": "nep",
+        "num_bytes_parquet_files": 1882303132,
+        "num_bytes_memory": 5029052354,
+        "num_rows": 966729,
+        "num_columns": 2,
+        "estimated_num_rows": 966581
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "unverified",
+        "split": "ori",
+        "num_bytes_parquet_files": 80916956,
+        "num_bytes_memory": 213557423,
+        "num_rows": 44330,
+        "num_columns": 2,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "unverified",
+        "split": "pan",
+        "num_bytes_parquet_files": 456205037,
+        "num_bytes_memory": 1184137989,
+        "num_rows": 195354,
+        "num_columns": 2,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "unverified",
+        "split": "san",
+        "num_bytes_parquet_files": 30050604,
+        "num_bytes_memory": 79791820,
+        "num_rows": 2993,
+        "num_columns": 2,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "unverified",
+        "split": "tam",
+        "num_bytes_parquet_files": 2004834025,
+        "num_bytes_memory": 5645132519,
+        "num_rows": 698446,
+        "num_columns": 2,
+        "estimated_num_rows": 1798132
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "unverified",
+        "split": "tel",
+        "num_bytes_parquet_files": 1969545380,
+        "num_bytes_memory": 5051186978,
+        "num_rows": 749160,
+        "num_columns": 2,
+        "estimated_num_rows": 749046
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "unverified",
+        "split": "urd",
+        "num_bytes_parquet_files": 2830026076,
+        "num_bytes_memory": 5953579607,
+        "num_rows": 1023372,
+        "num_columns": 2,
+        "estimated_num_rows": 1171837
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "verified",
+        "split": "asm",
+        "num_bytes_parquet_files": 980092999,
+        "num_bytes_memory": 2415729598,
+        "num_rows": 330714,
+        "num_columns": 3,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "verified",
+        "split": "ben",
+        "num_bytes_parquet_files": 1926833638,
+        "num_bytes_memory": 5002488991,
+        "num_rows": 738322,
+        "num_columns": 3,
+        "estimated_num_rows": 9529437
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "verified",
+        "split": "brx",
+        "num_bytes_parquet_files": 4494373,
+        "num_bytes_memory": 12161014,
+        "num_rows": 2956,
+        "num_columns": 3,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "verified",
+        "split": "doi",
+        "num_bytes_parquet_files": 106095,
+        "num_bytes_memory": 256380,
+        "num_rows": 54,
+        "num_columns": 3,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "verified",
+        "split": "eng",
+        "num_bytes_parquet_files": 3586194575,
+        "num_bytes_memory": 5813722488,
+        "num_rows": 2097150,
+        "num_columns": 3,
+        "estimated_num_rows": 15020563
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "verified",
+        "split": "gom",
+        "num_bytes_parquet_files": 32328050,
+        "num_bytes_memory": 76723500,
+        "num_rows": 14491,
+        "num_columns": 3,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "verified",
+        "split": "guj",
+        "num_bytes_parquet_files": 2251495859,
+        "num_bytes_memory": 5651805944,
+        "num_rows": 898778,
+        "num_columns": 3,
+        "estimated_num_rows": 3403942
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "verified",
+        "split": "hin",
+        "num_bytes_parquet_files": 2247944706,
+        "num_bytes_memory": 5891140374,
+        "num_rows": 1048577,
+        "num_columns": 3,
+        "estimated_num_rows": 14918958
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "verified",
+        "split": "kan",
+        "num_bytes_parquet_files": 2187364079,
+        "num_bytes_memory": 5691196684,
+        "num_rows": 1036019,
+        "num_columns": 3,
+        "estimated_num_rows": 3104884
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "verified",
+        "split": "kas",
+        "num_bytes_parquet_files": 787026,
+        "num_bytes_memory": 1566297,
+        "num_rows": 297,
+        "num_columns": 3,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "verified",
+        "split": "mai",
+        "num_bytes_parquet_files": 46736771,
+        "num_bytes_memory": 114457080,
+        "num_rows": 20153,
+        "num_columns": 3,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "verified",
+        "split": "mal",
+        "num_bytes_parquet_files": 2156973388,
+        "num_bytes_memory": 5871264062,
+        "num_rows": 1127460,
+        "num_columns": 3,
+        "estimated_num_rows": 5514860
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "verified",
+        "split": "mar",
+        "num_bytes_parquet_files": 1906292353,
+        "num_bytes_memory": 5014898174,
+        "num_rows": 873814,
+        "num_columns": 3,
+        "estimated_num_rows": 4886368
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "verified",
+        "split": "mni",
+        "num_bytes_parquet_files": 4607992,
+        "num_bytes_memory": 11616075,
+        "num_rows": 1128,
+        "num_columns": 3,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "verified",
+        "split": "nep",
+        "num_bytes_parquet_files": 1886878057,
+        "num_bytes_memory": 5000762424,
+        "num_rows": 964000,
+        "num_columns": 3,
+        "estimated_num_rows": 8455604
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "verified",
+        "split": "ori",
+        "num_bytes_parquet_files": 2150053473,
+        "num_bytes_memory": 5516474482,
+        "num_rows": 1093562,
+        "num_columns": 3,
+        "estimated_num_rows": 1721264
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "verified",
+        "split": "pan",
+        "num_bytes_parquet_files": 2114928197,
+        "num_bytes_memory": 5435561381,
+        "num_rows": 886988,
+        "num_columns": 3,
+        "estimated_num_rows": 1504823
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "verified",
+        "split": "san",
+        "num_bytes_parquet_files": 2285771893,
+        "num_bytes_memory": 5789450302,
+        "num_rows": 495308,
+        "num_columns": 3,
+        "estimated_num_rows": 777809
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "verified",
+        "split": "sat",
+        "num_bytes_parquet_files": 194271,
+        "num_bytes_memory": 503255,
+        "num_rows": 110,
+        "num_columns": 3,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "verified",
+        "split": "snd",
+        "num_bytes_parquet_files": 1409205919,
+        "num_bytes_memory": 2812309051,
+        "num_rows": 536495,
+        "num_columns": 3,
+        "estimated_num_rows": null
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "verified",
+        "split": "tam",
+        "num_bytes_parquet_files": 1786259124,
+        "num_bytes_memory": 5067501751,
+        "num_rows": 748983,
+        "num_columns": 3,
+        "estimated_num_rows": 6542605
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "verified",
+        "split": "tel",
+        "num_bytes_parquet_files": 2204054287,
+        "num_bytes_memory": 5613643122,
+        "num_rows": 1031867,
+        "num_columns": 3,
+        "estimated_num_rows": 6052124
+      },
+      {
+        "dataset": "ai4bharat/sangraha",
+        "config": "verified",
+        "split": "urd",
+        "num_bytes_parquet_files": 2711617155,
+        "num_bytes_memory": 5613029682,
+        "num_rows": 1153436,
+        "num_columns": 3,
+        "estimated_num_rows": 4603131
+      }
+    ]
+  },
+  "pending": [],
+  "failed": [],
+  "partial": true
+}

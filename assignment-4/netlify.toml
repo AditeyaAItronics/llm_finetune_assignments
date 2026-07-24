@@ -1,0 +1,11 @@
+# Netlify deploy config for the Session 4 data-cleaning-pipeline widget.
+# Drag-and-drop the dist/ folder in the Netlify UI, or run:
+#     netlify deploy --dir=dist --prod
+
+[build]
+  publish = "dist"
+
+[[headers]]
+  for = "/data/*.json"
+  [headers.values]
+    Content-Type = "application/json; charset=utf-8"
