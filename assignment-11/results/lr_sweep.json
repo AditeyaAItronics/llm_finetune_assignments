@@ -1,0 +1,57 @@
+{
+  "config": {
+    "widths": [
+      256,
+      512,
+      1024
+    ],
+    "lr_grid": [
+      0.0001,
+      0.0003,
+      0.001,
+      0.003,
+      0.006,
+      0.01,
+      0.03
+    ],
+    "steps": 200,
+    "warmup": 20,
+    "parameterisation": "standard (std = 1/sqrt(fan_in))",
+    "confound": "n_heads fixed at 4, so head_dim scales with width"
+  },
+  "minima": {
+    "256": {
+      "lr_grid_argmin": 0.003,
+      "lr_star_refined": 0.001892975347288412,
+      "loss_at_min": 1.2536484897136688,
+      "n_diverged": 0,
+      "min_is_interior": true
+    },
+    "512": {
+      "lr_grid_argmin": 0.001,
+      "lr_star_refined": 0.0008146999903511378,
+      "loss_at_min": 1.2364783585071564,
+      "n_diverged": 0,
+      "min_is_interior": true
+    },
+    "1024": {
+      "lr_grid_argmin": 0.0003,
+      "lr_star_refined": 0.0004149617420423868,
+      "loss_at_min": 1.2325293719768524,
+      "n_diverged": 0,
+      "min_is_interior": true
+    }
+  },
+  "fit": {
+    "form": "log10(lr*) = a + b*log2(width)",
+    "a": -0.09850037473818896,
+    "b": -0.3295684499391067,
+    "r2": 0.9959105335631163
+  },
+  "lr_pred_4096": 8.844600599073941e-05,
+  "lr_pred_4096_interval": [
+    6.494653271575211e-05,
+    0.00010765364828132251
+  ],
+  "factor_per_width_doubling": 0.4682001516848317
+}

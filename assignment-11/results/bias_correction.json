@@ -1,0 +1,34 @@
+{
+  "tolerance": 0.01,
+  "t_star_visible": 121258,
+  "t_star_stepsize": 3916,
+  "worst_step": 12,
+  "worst_factor": 0.15224129051350335,
+  "uncorrected_inflation_at_worst": 6.5685202524692405,
+  "factor_at_t1": 0.3162277660168381,
+  "n_steps_simulated": 200000,
+  "rel_diff_at_20": 4.989997753220534,
+  "gap_trace": {
+    "100": {
+      "abs_gap": 3.6567431171722684,
+      "rel_gap": 3.6567434828465837
+    },
+    "1000": {
+      "abs_gap": 9.967216073003296,
+      "rel_gap": 0.996721706972493
+    },
+    "10000": {
+      "abs_gap": 12.125506072967951,
+      "rel_gap": 0.12125507285517197
+    },
+    "50000": {
+      "abs_gap": 12.125731717567021,
+      "rel_gap": 0.024251465860277165
+    },
+    "200000": {
+      "abs_gap": 12.125731717567078,
+      "rel_gap": 0.006062866465069296
+    }
+  },
+  "direction": "uncorrected steps are LARGER than corrected ones early on"
+}
