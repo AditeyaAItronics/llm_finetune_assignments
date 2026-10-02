@@ -1,0 +1,102 @@
+# run=dense_continue params=3,225,600 config={"run_name": "dense_continue", "steps": 1000, "batch_size": 32, "lr": 0.0005, "min_lr": 5e-05, "warmup": 50, "weight_decay": 0.1, "aux_coef": 0.01, "grad_clip": 1.0, "eval_every": 100, "eval_batches": 20, "log_every": 10, "seed": 1337, "step_offset": 1500} model={"vocab_size": 65, "seq_len": 128, "d_model": 256, "n_layers": 4, "n_heads": 4, "d_ff": 1024}
+step     0 (global  1500) | lr 0.00e+00 | train_ce 1.2912 | aux 0.0000 | EVAL train 1.3039 val 1.5286
+step    10 (global  1510) | lr 1.00e-04 | train_ce 1.3205 | aux 0.0000
+step    20 (global  1520) | lr 2.00e-04 | train_ce 1.3476 | aux 0.0000
+step    30 (global  1530) | lr 3.00e-04 | train_ce 1.3168 | aux 0.0000
+step    40 (global  1540) | lr 4.00e-04 | train_ce 1.3185 | aux 0.0000
+step    50 (global  1550) | lr 5.00e-04 | train_ce 1.3938 | aux 0.0000
+step    60 (global  1560) | lr 5.00e-04 | train_ce 1.3415 | aux 0.0000
+step    70 (global  1570) | lr 5.00e-04 | train_ce 1.4068 | aux 0.0000
+step    80 (global  1580) | lr 4.99e-04 | train_ce 1.3475 | aux 0.0000
+step    90 (global  1590) | lr 4.98e-04 | train_ce 1.3806 | aux 0.0000
+step   100 (global  1600) | lr 4.97e-04 | train_ce 1.3772 | aux 0.0000 | EVAL train 1.3665 val 1.5825
+step   110 (global  1610) | lr 4.96e-04 | train_ce 1.3594 | aux 0.0000
+step   120 (global  1620) | lr 4.94e-04 | train_ce 1.3837 | aux 0.0000
+step   130 (global  1630) | lr 4.92e-04 | train_ce 1.3805 | aux 0.0000
+step   140 (global  1640) | lr 4.90e-04 | train_ce 1.3608 | aux 0.0000
+step   150 (global  1650) | lr 4.88e-04 | train_ce 1.3200 | aux 0.0000
+step   160 (global  1660) | lr 4.86e-04 | train_ce 1.3732 | aux 0.0000
+step   170 (global  1670) | lr 4.83e-04 | train_ce 1.3759 | aux 0.0000
+step   180 (global  1680) | lr 4.80e-04 | train_ce 1.3240 | aux 0.0000
+step   190 (global  1690) | lr 4.77e-04 | train_ce 1.3305 | aux 0.0000
+step   200 (global  1700) | lr 4.73e-04 | train_ce 1.3195 | aux 0.0000 | EVAL train 1.3527 val 1.5717
+step   210 (global  1710) | lr 4.70e-04 | train_ce 1.3198 | aux 0.0000
+step   220 (global  1720) | lr 4.66e-04 | train_ce 1.2963 | aux 0.0000
+step   230 (global  1730) | lr 4.62e-04 | train_ce 1.3626 | aux 0.0000
+step   240 (global  1740) | lr 4.57e-04 | train_ce 1.3339 | aux 0.0000
+step   250 (global  1750) | lr 4.53e-04 | train_ce 1.2998 | aux 0.0000
+step   260 (global  1760) | lr 4.48e-04 | train_ce 1.3015 | aux 0.0000
+step   270 (global  1770) | lr 4.44e-04 | train_ce 1.3514 | aux 0.0000
+step   280 (global  1780) | lr 4.39e-04 | train_ce 1.3367 | aux 0.0000
+step   290 (global  1790) | lr 4.33e-04 | train_ce 1.3441 | aux 0.0000
+step   300 (global  1800) | lr 4.28e-04 | train_ce 1.3877 | aux 0.0000 | EVAL train 1.3357 val 1.5529
+step   310 (global  1810) | lr 4.22e-04 | train_ce 1.3131 | aux 0.0000
+step   320 (global  1820) | lr 4.17e-04 | train_ce 1.3689 | aux 0.0000
+step   330 (global  1830) | lr 4.11e-04 | train_ce 1.3037 | aux 0.0000
+step   340 (global  1840) | lr 4.05e-04 | train_ce 1.3304 | aux 0.0000
+step   350 (global  1850) | lr 3.99e-04 | train_ce 1.3198 | aux 0.0000
+step   360 (global  1860) | lr 3.92e-04 | train_ce 1.2893 | aux 0.0000
+step   370 (global  1870) | lr 3.86e-04 | train_ce 1.3504 | aux 0.0000
+step   380 (global  1880) | lr 3.79e-04 | train_ce 1.3511 | aux 0.0000
+step   390 (global  1890) | lr 3.73e-04 | train_ce 1.2954 | aux 0.0000
+step   400 (global  1900) | lr 3.66e-04 | train_ce 1.2863 | aux 0.0000 | EVAL train 1.3131 val 1.5414
+step   410 (global  1910) | lr 3.59e-04 | train_ce 1.3099 | aux 0.0000
+step   420 (global  1920) | lr 3.52e-04 | train_ce 1.3338 | aux 0.0000
+step   430 (global  1930) | lr 3.45e-04 | train_ce 1.2517 | aux 0.0000
+step   440 (global  1940) | lr 3.38e-04 | train_ce 1.2966 | aux 0.0000
+step   450 (global  1950) | lr 3.31e-04 | train_ce 1.2632 | aux 0.0000
+step   460 (global  1960) | lr 3.24e-04 | train_ce 1.3296 | aux 0.0000
+step   470 (global  1970) | lr 3.16e-04 | train_ce 1.2889 | aux 0.0000
+step   480 (global  1980) | lr 3.09e-04 | train_ce 1.3319 | aux 0.0000
+step   490 (global  1990) | lr 3.02e-04 | train_ce 1.3078 | aux 0.0000
+step   500 (global  2000) | lr 2.94e-04 | train_ce 1.3268 | aux 0.0000 | EVAL train 1.2929 val 1.5311
+step   510 (global  2010) | lr 2.87e-04 | train_ce 1.3171 | aux 0.0000
+step   520 (global  2020) | lr 2.79e-04 | train_ce 1.2586 | aux 0.0000
+step   530 (global  2030) | lr 2.72e-04 | train_ce 1.2967 | aux 0.0000
+step   540 (global  2040) | lr 2.65e-04 | train_ce 1.3054 | aux 0.0000
+step   550 (global  2050) | lr 2.57e-04 | train_ce 1.2318 | aux 0.0000
+step   560 (global  2060) | lr 2.50e-04 | train_ce 1.2852 | aux 0.0000
+step   570 (global  2070) | lr 2.42e-04 | train_ce 1.2669 | aux 0.0000
+step   580 (global  2080) | lr 2.35e-04 | train_ce 1.3645 | aux 0.0000
+step   590 (global  2090) | lr 2.28e-04 | train_ce 1.2402 | aux 0.0000
+step   600 (global  2100) | lr 2.20e-04 | train_ce 1.2682 | aux 0.0000 | EVAL train 1.2673 val 1.5225
+step   610 (global  2110) | lr 2.13e-04 | train_ce 1.2372 | aux 0.0000
+step   620 (global  2120) | lr 2.06e-04 | train_ce 1.2764 | aux 0.0000
+step   630 (global  2130) | lr 1.99e-04 | train_ce 1.2224 | aux 0.0000
+step   640 (global  2140) | lr 1.92e-04 | train_ce 1.2819 | aux 0.0000
+step   650 (global  2150) | lr 1.85e-04 | train_ce 1.1801 | aux 0.0000
+step   660 (global  2160) | lr 1.79e-04 | train_ce 1.2381 | aux 0.0000
+step   670 (global  2170) | lr 1.72e-04 | train_ce 1.2034 | aux 0.0000
+step   680 (global  2180) | lr 1.65e-04 | train_ce 1.1865 | aux 0.0000
+step   690 (global  2190) | lr 1.59e-04 | train_ce 1.2466 | aux 0.0000
+step   700 (global  2200) | lr 1.53e-04 | train_ce 1.2671 | aux 0.0000 | EVAL train 1.2475 val 1.5066
+step   710 (global  2210) | lr 1.46e-04 | train_ce 1.2023 | aux 0.0000
+step   720 (global  2220) | lr 1.40e-04 | train_ce 1.1624 | aux 0.0000
+step   730 (global  2230) | lr 1.34e-04 | train_ce 1.2620 | aux 0.0000
+step   740 (global  2240) | lr 1.29e-04 | train_ce 1.2191 | aux 0.0000
+step   750 (global  2250) | lr 1.23e-04 | train_ce 1.2266 | aux 0.0000
+step   760 (global  2260) | lr 1.18e-04 | train_ce 1.1946 | aux 0.0000
+step   770 (global  2270) | lr 1.13e-04 | train_ce 1.2129 | aux 0.0000
+step   780 (global  2280) | lr 1.07e-04 | train_ce 1.2497 | aux 0.0000
+step   790 (global  2290) | lr 1.03e-04 | train_ce 1.1845 | aux 0.0000
+step   800 (global  2300) | lr 9.79e-05 | train_ce 1.1858 | aux 0.0000 | EVAL train 1.2278 val 1.5042
+step   810 (global  2310) | lr 9.34e-05 | train_ce 1.2040 | aux 0.0000
+step   820 (global  2320) | lr 8.91e-05 | train_ce 1.2055 | aux 0.0000
+step   830 (global  2330) | lr 8.50e-05 | train_ce 1.2205 | aux 0.0000
+step   840 (global  2340) | lr 8.11e-05 | train_ce 1.2150 | aux 0.0000
+step   850 (global  2350) | lr 7.75e-05 | train_ce 1.1864 | aux 0.0000
+step   860 (global  2360) | lr 7.40e-05 | train_ce 1.1897 | aux 0.0000
+step   870 (global  2370) | lr 7.08e-05 | train_ce 1.1698 | aux 0.0000
+step   880 (global  2380) | lr 6.78e-05 | train_ce 1.2052 | aux 0.0000
+step   890 (global  2390) | lr 6.50e-05 | train_ce 1.2377 | aux 0.0000
+step   900 (global  2400) | lr 6.24e-05 | train_ce 1.1634 | aux 0.0000 | EVAL train 1.2134 val 1.4982
+step   910 (global  2410) | lr 6.01e-05 | train_ce 1.1913 | aux 0.0000
+step   920 (global  2420) | lr 5.80e-05 | train_ce 1.1700 | aux 0.0000
+step   930 (global  2430) | lr 5.62e-05 | train_ce 1.2139 | aux 0.0000
+step   940 (global  2440) | lr 5.46e-05 | train_ce 1.2325 | aux 0.0000
+step   950 (global  2450) | lr 5.32e-05 | train_ce 1.2080 | aux 0.0000
+step   960 (global  2460) | lr 5.21e-05 | train_ce 1.1872 | aux 0.0000
+step   970 (global  2470) | lr 5.12e-05 | train_ce 1.2063 | aux 0.0000
+step   980 (global  2480) | lr 5.05e-05 | train_ce 1.1679 | aux 0.0000
+step   990 (global  2490) | lr 5.01e-05 | train_ce 1.2205 | aux 0.0000
+step  1000 (global  2500) | lr 5.00e-05 | train_ce 1.1758 | aux 0.0000 | EVAL train 1.2067 val 1.4967

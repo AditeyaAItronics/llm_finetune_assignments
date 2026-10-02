@@ -1,0 +1,4 @@
+python 3.12.10
+torch 2.14.0+cpu
+device cpu, threads 16
+platform Windows-10-10.0.19045-SP0

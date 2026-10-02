@@ -1,0 +1,9 @@
+{
+  "dense_val": 1.5285755813121795,
+  "moe_val": 1.528575611114502,
+  "abs_diff": 2.9802322387695312e-08,
+  "max_logit_diff": 7.510185241699219e-06,
+  "dense_params": 3225600,
+  "moe_params": 9536512,
+  "active_params_per_token": 5331968
+}
