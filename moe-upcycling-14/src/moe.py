@@ -1,8 +1,10 @@
 """Top-k Mixture-of-Experts FFN and sparse upcycling of a dense GPT."""
+import copy
+
 import torch
 import torch.nn as nn
 
-from src.model import MLP
+from src.model import GPT, MLP
 
 
 class MoE(nn.Module):
@@ -32,3 +34,24 @@ class MoE(nn.Module):
         self.aux_loss = self.n_experts * (frac * probs.mean(dim=0)).sum()
         self.last_frac = frac.detach()
         return out.reshape(b, t, d)
+
+
+def upcycle(dense: GPT, n_experts: int = 4, top_k: int = 2,
+            router_std: float = 0.02, seed: int = 0) -> GPT:
+    """Sparse upcycling: copy each dense FFN into every expert, add a fresh router.
+
+    Identical experts + gates that sum to 1 => output equals the dense FFN exactly,
+    whatever the router picks. So the router is random (spreads load from step 0)
+    and no noise is added to the experts (that would break function preservation).
+    """
+    model = copy.deepcopy(dense)
+    g = torch.Generator().manual_seed(seed)
+    for blk in model.blocks:
+        dense_ffn = blk.ffn
+        moe = MoE(model.cfg.d_model, model.cfg.d_ff, n_experts, top_k)
+        for expert in moe.experts:
+            expert.load_state_dict(dense_ffn.state_dict())
+        with torch.no_grad():
+            moe.router.weight.copy_(torch.randn(moe.router.weight.shape, generator=g) * router_std)
+        blk.ffn = moe
+    return model
